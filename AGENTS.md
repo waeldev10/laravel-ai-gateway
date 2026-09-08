@@ -1,33 +1,77 @@
-# Laravel AI Gateway
+# Laravel AI Getway
 
-Laravel 13 app (PHP ≥ 8.3). Fresh scaffold — routes, models, and controllers are mostly default. Build from scratch.
+Laravel 13 application (PHP >= 8.3).
+
+AI-powered chat gateway designed to provide a central backend for integrating AI models and multiple clients and channels.
+
+---
+
+## Agent Instructions
+
+This file is the entry point for AI agents working on this project.
+
+Before modifying code:
+
+1. Read this file.
+2. Read `WORKFLOW.md`.
+3. Read `plans/README.md`.
+4. Identify the current plan and phase.
+5. Read the relevant plan completely.
+6. Read `agent-skills/README.md`.
+7. Read all skills relevant to the current phase.
+8. Inspect the existing code before making changes.
+9. Propose the implementation scope and wait for human confirmation.
+10. Implement only the approved phase.
+
+Follow `WORKFLOW.md` for the complete development process.
+
+---
+
+## Project Overview
+
+The project is a Laravel-based AI Gateway.
+
+The Laravel application acts as the central backend between clients/channels and AI providers.
+
+Expected clients and channels include:
+
+- Laravel Web Chat
+- React/Next.js clients
+- Telegram
+- WhatsApp
+
+Expected AI providers include:
+
+- OpenAI
+- Gemini
+- Other providers when required
+
+The project is developed incrementally through the plans defined in:
+
+`plans/`
+
+Do not implement future plans early.
+
+---
 
 ## Commands
 
 ```sh
-composer setup          # install, .env, key:generate, migrate, npm install, npm run build
-composer test           # clears config cache then runs php artisan test
-composer dev            # starts artisan dev server (long-running)
-npm run build           # vite production build
-npm run dev             # vite dev server
-```
+composer setup
+# Install dependencies, configure .env, generate application key,
+# run migrations, install npm dependencies, and build assets.
 
-Single test: `php artisan test --filter="test name"` or `vendor/bin/pest --filter="test name"`
+composer test
+# Clear configuration cache and run the test suite.
 
-## Stack
+composer dev
+# Start the Laravel development environment.
 
-- **Testing:** Pest PHP 5 (phpunit.xml present but Pest is the runner)
-- **CSS:** Tailwind CSS 4 via `@tailwindcss/vite`
-- **Build:** Vite 8 + laravel-vite-plugin 3
-- **Linting:** Laravel Pint (`vendor/bin/pint`)
-- **DB (dev):** MySQL (`laravel_ai_gateway` database)
-- **DB (test):** SQLite in-memory (set in phpunit.xml, no `.env` override needed)
+npm run build
+# Build frontend assets for production.
 
-## Conventions
+npm run dev
+# Start the Vite development server.
 
-- Models use Laravel 11+ attribute syntax: `#[Fillable]`, `#[Hidden]` (see `app/Models/User.php`)
-- No `routes/api.php` — API routing is not yet wired. Only `routes/web.php` and `routes/console.php` exist
-- Frontend entry points: `resources/css/app.css`, `resources/js/app.js`
-- `.npmrc` sets `ignore-scripts=true` — postinstall scripts are skipped by design
-- Test base class is `Tests\TestCase` with `RefreshDatabase` trait commented out in `tests/Pest.php`
-- Feature tests live in `tests/Feature/`, unit tests in `tests/Unit/`
+vendor/bin/pint
+# Run Laravel Pint.
