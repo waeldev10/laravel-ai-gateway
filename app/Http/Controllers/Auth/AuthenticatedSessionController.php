@@ -22,13 +22,15 @@ class AuthenticatedSessionController extends Controller
     {
         $this->authentication->login($request->validated(), $request->boolean('remember'), $request);
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('conversations.create', absolute: false))
+            ->with('toast', ['type' => 'success', 'title' => 'مرحباً بعودتك', 'message' => 'تم تسجيل الدخول بنجاح.']);
     }
 
     public function destroy(Request $request): RedirectResponse
     {
         $this->authentication->logout($request);
 
-        return redirect('/');
+        return redirect()->route('login')
+            ->with('toast', ['type' => 'info', 'title' => 'تم تسجيل الخروج', 'message' => 'نراك قريباً.']);
     }
 }

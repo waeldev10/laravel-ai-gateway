@@ -1,0 +1,224 @@
+<?php
+
+use App\Livewire\LoginForm;
+use App\Livewire\MessageComposer;
+use App\Livewire\ProfileForm;
+use App\Livewire\RegisterForm;
+use App\Livewire\UiColorSettings;
+use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\User;
+use App\Services\Theme\UiColorService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Validator;
+use Livewire\Livewire;
+
+uses(RefreshDatabase::class);
+
+describe('new conversation validation', function () {
+    test('empty content fails with an Arabic message and creates nothing', function () {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(MessageComposer::class)
+            ->set('content', '')
+            ->call('send')
+            ->assertHasErrors(['content']);
+
+        expect($component->errors()->get('content'))->toBe(['حقل الرسالة مطلوب.'])
+            ->and(Conversation::count())->toBe(0)
+            ->and(Message::count())->toBe(0);
+    });
+
+    test('whitespace-only content fails with an Arabic message and creates nothing', function () {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(MessageComposer::class)
+            ->set('content', '   ')
+            ->call('send')
+            ->assertHasErrors(['content']);
+
+        expect($component->errors()->get('content'))->toBe(['حقل الرسالة مطلوب.'])
+            ->and(Conversation::count())->toBe(0)
+            ->and(Message::count())->toBe(0);
+    });
+
+    test('valid content reaches the component and persists exactly', function () {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(MessageComposer::class)
+            ->set('content', 'مرحبا')
+            ->assertSet('content', 'مرحبا')
+            ->call('send')
+            ->assertHasNoErrors();
+
+        $conversation = Conversation::first();
+        $message = Message::first();
+
+        expect($conversation)->not()->toBeNull()
+            ->and($message)->not()->toBeNull()
+            ->and($message->content)->toBe('مرحبا')
+            ->and($message->role->value)->toBe('user');
+
+        $component->assertRedirect(route('conversations.show', $conversation));
+    });
+
+    test('message posting through HTTP validates content in Arabic', function () {
+        $user = User::factory()->create();
+        $conversation = Conversation::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->post(route('conversations.messages.store', $conversation), ['content' => ''])
+            ->assertSessionHasErrors(['content']);
+
+        expect(session('errors')->get('content'))->toBe(['حقل الرسالة مطلوب.'])
+            ->and(Message::count())->toBe(0);
+    });
+});
+
+describe('authentication validation in Arabic', function () {
+    test('login required fields show Arabic messages', function () {
+        $component = Livewire::test(LoginForm::class)
+            ->set('email', '')
+            ->set('password', '')
+            ->call('login')
+            ->assertHasErrors(['email', 'password']);
+
+        expect($component->errors()->get('email'))->toBe(['حقل البريد الإلكتروني مطلوب.'])
+            ->and($component->errors()->get('password'))->toBe(['حقل كلمة المرور مطلوب.']);
+    });
+
+    test('register required fields show Arabic messages', function () {
+        $component = Livewire::test(RegisterForm::class)
+            ->set('name', '')
+            ->set('email', '')
+            ->set('password', '')
+            ->set('password_confirmation', '')
+            ->call('register')
+            ->assertHasErrors(['name', 'email', 'password']);
+
+        expect($component->errors()->get('name'))->toBe(['حقل الاسم مطلوب.'])
+            ->and($component->errors()->get('email'))->toBe(['حقل البريد الإلكتروني مطلوب.'])
+            ->and($component->errors()->get('password'))->toContain('حقل كلمة المرور مطلوب.');
+    });
+
+    test('register password mismatch shows an Arabic confirmation message', function () {
+        $component = Livewire::test(RegisterForm::class)
+            ->set('name', 'ليلى')
+            ->set('email', 'laila@example.com')
+            ->set('password', 'long-secure-password')
+            ->set('password_confirmation', 'different-password')
+            ->call('register')
+            ->assertHasErrors(['password']);
+
+        expect($component->errors()->get('password'))->toContain('تأكيد كلمة المرور غير متطابق.')
+            ->and(User::where('email', 'laila@example.com')->count())->toBe(0);
+    });
+});
+
+describe('profile validation in Arabic', function () {
+    test('profile fields show Arabic messages', function () {
+        $user = User::factory()->create(['name' => 'Keep', 'email' => 'keep@example.com']);
+        $this->actingAs($user);
+
+        $component = Livewire::test(ProfileForm::class)
+            ->set('name', '')
+            ->set('email', 'not-an-email')
+            ->call('saveProfile')
+            ->assertHasErrors(['name', 'email']);
+
+        expect($component->errors()->get('name'))->toBe(['حقل الاسم مطلوب.'])
+            ->and($component->errors()->get('email'))->toBe(['يجب أن يكون البريد الإلكتروني بريداً إلكترونياً صالحاً.'])
+            ->and($user->refresh()->name)->toBe('Keep');
+    });
+
+    test('incorrect current password shows an Arabic message without sensitive details', function () {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(ProfileForm::class)
+            ->set('currentPassword', 'wrong-password')
+            ->set('newPassword', 'new-secure-password')
+            ->set('newPassword_confirmation', 'new-secure-password')
+            ->call('savePassword')
+            ->assertHasErrors(['currentPassword']);
+
+        $message = (string) $component->errors()->first('currentPassword');
+
+        expect($message)->toContain('الحالية')
+            ->and($message)->not()->toContain('currentPassword');
+    });
+
+    test('weak new password shows an Arabic message', function () {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(ProfileForm::class)
+            ->set('currentPassword', 'password')
+            ->set('newPassword', 'short')
+            ->set('newPassword_confirmation', 'short')
+            ->call('savePassword')
+            ->assertHasErrors(['newPassword']);
+
+        $message = (string) $component->errors()->first('newPassword');
+
+        expect($message)->toContain('كلمة المرور الجديدة')
+            ->and($message)->not()->toContain('newPassword');
+    });
+});
+
+describe('settings validation in Arabic', function () {
+    test('invalid color values produce Arabic messages', function () {
+        $message = (string) Validator::make(
+            ['primary' => 'red'],
+            ['primary' => ['required', 'string', UiColorService::HEX_RULE]]
+        )->errors()->first();
+
+        expect($message)->toBe('صيغة اللون الرئيسي غير صالحة.');
+
+        $missing = (string) Validator::make(
+            [],
+            ['primary' => ['required', 'string', UiColorService::HEX_RULE]]
+        )->errors()->first();
+
+        expect($missing)->toBe('حقل اللون الرئيسي مطلوب.');
+    });
+
+    test('invalid colors are rejected through the component without persisting', function () {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(UiColorSettings::class)
+            ->call('save', [
+                'primary' => 'url(evil)',
+                'primary_text' => '#FFFFFF',
+                'accent' => '#7C3AED',
+                'link' => '#1D4ED8',
+            ])
+            ->assertDispatched('toast', type: 'error');
+
+        expect($user->refresh()->ui_colors)->toBeNull();
+    });
+});
+
+describe('no raw field names leak to the user', function () {
+    test('all user-facing messages use Arabic attribute names', function () {
+        $messages = [
+            (string) Validator::make(['content' => ''], ['content' => ['required']])->errors()->first(),
+            (string) Validator::make(['password_confirmation' => 'x'], ['password' => ['required', 'confirmed']])->errors()->first('password'),
+            (string) Validator::make(['primary' => 'red'], ['primary' => ['required', 'string', UiColorService::HEX_RULE]])->errors()->first(),
+            (string) Validator::make(['title' => ''], ['title' => ['required']])->errors()->first(),
+        ];
+
+        foreach ($messages as $message) {
+            expect($message)->not()->toContain('content')
+                ->and($message)->not()->toContain('password_confirmation')
+                ->and($message)->not()->toContain('primary');
+        }
+
+        expect($messages[0])->toBe('حقل الرسالة مطلوب.')
+            ->and($messages[3])->toBe('حقل العنوان مطلوب.');
+    });
+});

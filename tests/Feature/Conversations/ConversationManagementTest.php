@@ -7,6 +7,7 @@ use App\Policies\ConversationPolicy;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -430,7 +431,7 @@ describe('conversation bulk deletion', function () {
         $conversation = Conversation::factory()->create(['user_id' => $user->id]);
 
         $this->actingAs($user)
-            ->delete(route('conversations.destroyMany'), ['ids' => [9999, 8888]])
+            ->delete(route('conversations.destroyMany'), ['ids' => [(string) Str::ulid(), (string) Str::ulid()]])
             ->assertForbidden();
 
         expect(Conversation::find($conversation->id))->not()->toBeNull();
@@ -445,7 +446,7 @@ describe('conversation bulk deletion', function () {
         expect(Conversation::find($conversation->id))->not()->toBeNull();
     });
 
-    test('bulk deletion requires an array of integer ids', function () {
+    test('bulk deletion requires an array of ulid ids', function () {
         $user = User::factory()->create();
 
         $this->actingAs($user)
@@ -518,8 +519,9 @@ describe('conversation selection interface', function () {
         $this->actingAs($user)
             ->get(route('conversations.index'))
             ->assertOk()
-            ->assertSee('x-ref="singleDelete'.$first->id.'"', false)
-            ->assertSee('x-ref="singleDelete'.$second->id.'"', false);
+            ->assertSee('x-model="selected"', false)
+            ->assertSee('value="'.$first->id.'"', false)
+            ->assertSee('value="'.$second->id.'"', false);
     });
 
     test('the index shows a select all checkbox', function () {
@@ -540,8 +542,8 @@ describe('conversation selection interface', function () {
         $this->actingAs($user)
             ->get(route('conversations.index'))
             ->assertOk()
-            ->assertSee(':value="'.$first->id.'"', false)
-            ->assertSee(':value="'.$second->id.'"', false);
+            ->assertSee('value="'.$first->id.'"', false)
+            ->assertSee('value="'.$second->id.'"', false);
     });
 
     test('the bulk delete form points to the destroy many route', function () {
@@ -551,7 +553,8 @@ describe('conversation selection interface', function () {
         $this->actingAs($user)
             ->get(route('conversations.index'))
             ->assertOk()
-            ->assertSee('action="'.route('conversations.destroyMany').'"', false);
+            ->assertSee(route('conversations.destroyMany'), false)
+            ->assertSee('index-bulk-delete', false);
     });
 
     test('the bulk delete bar is only shown when conversations are selected', function () {

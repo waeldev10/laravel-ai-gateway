@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DestroyManyConversationsRequest;
 use App\Http\Requests\ListConversationsRequest;
 use App\Http\Requests\StoreConversationRequest;
+use App\Http\Requests\UpdateConversationRequest;
 use App\Models\Conversation;
 use App\Services\Conversation\ConversationService;
 use App\Services\Message\MessageService;
@@ -34,11 +35,17 @@ class ConversationController extends Controller
         return view('conversations.create');
     }
 
+    public function search(): View
+    {
+        return view('conversations.search');
+    }
+
     public function store(StoreConversationRequest $request): RedirectResponse
     {
         $conversation = $this->conversations->createFor($request->user(), $request->validated());
 
-        return redirect()->route('conversations.show', $conversation);
+        return redirect()->route('conversations.show', $conversation)
+            ->with('toast', ['type' => 'success', 'title' => 'محادثة جديدة', 'message' => 'تم إنشاء المحادثة بنجاح.']);
     }
 
     public function show(Request $request, Conversation $conversation): View
@@ -57,13 +64,36 @@ class ConversationController extends Controller
 
         $this->conversations->deleteFor($request->user(), $conversation);
 
-        return redirect()->route('conversations.index');
+        return redirect()->route('conversations.index')
+            ->with('toast', ['type' => 'success', 'title' => 'تم حذف المحادثة', 'message' => 'تم حذف المحادثة نهائياً.']);
+    }
+
+    public function update(UpdateConversationRequest $request, Conversation $conversation): RedirectResponse
+    {
+        $this->conversations->renameFor($request->user(), $conversation, $request->validated('title'));
+
+        return back()
+            ->with('toast', ['type' => 'success', 'title' => 'تمت إعادة التسمية', 'message' => $request->validated('title')]);
+    }
+
+    public function togglePin(Request $request, Conversation $conversation): RedirectResponse
+    {
+        $conversation = $this->conversations->setPinnedFor($request->user(), $conversation, $conversation->pinned_at === null);
+
+        return back()
+            ->with('toast', [
+                'type' => 'success',
+                'title' => $conversation->pinned_at !== null ? 'تم التثبيت' : 'تم إلغاء التثبيت',
+                'message' => $conversation->title,
+            ]);
     }
 
     public function destroyMany(DestroyManyConversationsRequest $request): RedirectResponse
     {
-        $this->conversations->deleteMany($request->user(), $request->validated('ids', []));
+        $ids = $request->validated('ids', []);
+        $this->conversations->deleteMany($request->user(), $ids);
 
-        return redirect()->route('conversations.index');
+        return redirect()->route('conversations.index')
+            ->with('toast', ['type' => 'success', 'title' => 'تم حذف المحادثات', 'message' => 'تم حذف '.count($ids).' من المحادثات نهائياً.']);
     }
 }

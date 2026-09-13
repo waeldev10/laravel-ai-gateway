@@ -1,232 +1,86 @@
 @extends('layouts.app')
-
 @section('title', 'المحادثات')
-
 @section('content')
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-semibold">المحادثات</h1>
-            <p class="mt-1 text-sm text-[#706f6c] dark:text-[#A1A09A]">
-                جميع محادثاتك في مكان واحد.
-            </p>
-        </div>
-
-        <a
-            wire:navigate
-            href="{{ route('conversations.create') }}"
-            class="rounded-sm border border-black bg-[#1b1b18] px-4 py-1.5 text-sm text-white hover:bg-black dark:bg-[#EDEDEC] dark:text-[#1b1b18]"
-        >
-            محادثة جديدة
-        </a>
-    </div>
-
-    <form method="GET" action="{{ route('conversations.index') }}" class="mt-6 flex items-center gap-2">
-        <input
-            type="search"
-            name="search"
-            value="{{ $search }}"
-            placeholder="ابحث في محادثاتك..."
-            class="w-full rounded-sm border border-[#19140035] bg-white px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-[#3E3E3A] dark:bg-[#161615] dark:text-[#EDEDEC]"
-        >
-        @if ($search)
-            <a
-                wire:navigate
-                href="{{ route('conversations.index') }}"
-                aria-label="مسح البحث"
-                title="مسح البحث"
-                class="shrink-0 rounded-sm border border-[#19140035] px-3 py-2 text-sm hover:border-black dark:border-[#3E3E3A]"
-            >
-                ×
-            </a>
+    <div class="max-w-3xl mx-auto px-4 py-8">
+        @if($conversations->isEmpty() && !$search)
+            <div class="text-center py-12 space-y-3">
+                <h1 class="text-2xl font-semibold">مرحباً بك</h1>
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">اختر محادثة من الشريط الجانبي أو ابدأ محادثة جديدة.</p>
+                <a href="{{ route('conversations.create') }}"
+                    class="inline-block mt-4 rounded-full ui-primary-btn px-6 py-2.5 text-sm font-medium">محادثة
+                    جديدة</a>
+            </div>
+        @else
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                    <h1 class="text-xl font-semibold">المحادثات</h1>
+                    @if($search)
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">نتائج البحث عن «{{ $search }}» —
+                            {{ $conversations->count() }} نتيجة</p>
+                    @else
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{{ $conversations->count() }} محادثة</p>
+                    @endif
+                </div>
+                <a href="{{ route('conversations.create') }}"
+                    class="shrink-0 rounded-full ui-primary-btn px-5 py-2 text-sm font-medium">＋
+                    محادثة جديدة</a>
+            </div>
         @endif
-        <button
-            type="submit"
-            class="shrink-0 rounded-sm border border-black bg-[#1b1b18] px-4 py-2 text-sm text-white hover:bg-black dark:bg-[#EDEDEC] dark:text-[#1b1b18]"
-        >
-            بحث
-        </button>
-    </form>
-
-    @if ($conversations->isEmpty())
-        <div class="mt-8 rounded-sm border border-dashed border-[#19140035] p-6 text-center text-sm text-[#706f6c] dark:border-[#3E3E3A] dark:text-[#A1A09A]">
-            @if ($search)
-                لا توجد محادثات مطابقة لبحثك عن «{{ $search }}».
-                <a wire:navigate href="{{ route('conversations.index') }}" class="font-medium underline underline-offset-4">
-                    مسح البحث
-                </a>
-            @else
-                لا توجد محادثات بعد.
-                <a wire:navigate href="{{ route('conversations.create') }}" class="font-medium underline underline-offset-4">
-                    ابدأ محادثتك الأولى
-                </a>
+        <div class="grid gap-2" x-data='{selected: [], allIds: @js(array_map("strval", $conversations->modelKeys()))}'>
+            @if($conversations->isNotEmpty())
+                <div class="flex gap-2 mb-2 items-center flex-wrap">
+                    <label class="text-xs flex items-center gap-1.5 cursor-pointer min-h-[32px]">
+                        <input type="checkbox"
+                            :checked="allIds.length > 0 && selected.length === allIds.length"
+                            x-effect="$el.indeterminate = selected.length > 0 && selected.length < allIds.length"
+                            @change="selected = $el.checked ? [...allIds] : []"
+                            aria-label="تحديد الكل"
+                            class="rounded border-black/20 dark:border-white/20 w-4 h-4 ui-checkbox">
+                        <span>تحديد الكل</span>
+                    </label>
+                    <button x-show="selected.length > 0" x-cloak
+                        @click="window.dispatchEvent(new CustomEvent('open-confirm-modal', { detail: { id: 'index-bulk-delete', action: '{{ route('conversations.destroyMany') }}', subject: 'سيتم حذف ' + selected.length + ' من المحادثات نهائياً.' } }))"
+                        class="text-xs font-medium bg-red-600 text-white px-4 py-1.5 rounded-full hover:bg-red-700 inline-flex items-center gap-1 min-h-[32px] transition-colors">حذف المحدد (<span
+                            x-text="selected.length"></span>)</button>
+                </div>
             @endif
+            @foreach($conversations as $c)
+                <div
+                    class="flex items-center gap-2 p-4 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/5 transition">
+                    <input type="checkbox" x-model="selected" value="{{ $c->id }}"
+                        aria-label="تحديد {{ $c->title }}"
+                        class="rounded border-black/20 dark:border-white/20 w-4 h-4 shrink-0 ui-checkbox">
+                    <a wire:navigate href="{{ route('conversations.show', $c) }}"
+                        class="flex-1 min-w-0 flex justify-between items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current">
+                        <span class="truncate font-medium text-sm">{{ $c->title }}</span><span
+                            class="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">{{ $c->created_at->translatedFormat('j F Y') }}</span>
+                    </a>
+                </div>
+            @endforeach
+            @if($conversations->isEmpty() && $search)
+                <div class="text-center py-10 text-sm text-zinc-500 dark:text-zinc-400">لا توجد نتائج مطابقة. جرّب كلمة أخرى أو
+                    <a wire:navigate href="{{ route('conversations.create') }}" class="underline underline-offset-4">ابدأ محادثة جديدة</a>.
+                </div>
+            @endif
+            @if($search)
+                <div class="flex justify-center pt-2">
+                    <a wire:navigate aria-label="مسح البحث" href="{{ route('conversations.index') }}"
+                        class="rounded-full border border-black/10 dark:border-white/10 px-5 py-1.5 text-xs hover:bg-black/5 dark:hover:bg-white/10 min-h-[32px] inline-flex items-center">مسح البحث ×</a>
+                </div>
+            @endif
+            <x-ui.confirm-modal id="index-bulk-delete" title="حذف المحادثات" message="سيتم حذف المحادثات المحددة نهائياً. لا يمكن التراجع عن هذا الإجراء." confirmLabel="حذف" cancelLabel="إلغاء" :teleport="true">
+                <x-slot:confirm>
+                    <form :action="actionUrl" method="POST" @submit="if (busy) { $event.preventDefault(); } else { busy = true; }" class="contents">
+                        @csrf @method('DELETE')
+                        <template x-for="id in selected" :key="id"><input type="hidden" name="ids[]" :value="id"></template>
+                        <button type="submit" :disabled="busy"
+                            class="px-5 py-2 rounded-full bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5 min-h-[36px]">
+                            <svg x-show="busy" x-cloak class="animate-spin" width="1em" height="1em" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25" /><path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round" /></svg>
+                            <span x-text="busy ? 'جارٍ الحذف...' : 'حذف'">حذف</span>
+                        </button>
+                    </form>
+                </x-slot:confirm>
+            </x-ui.confirm-modal>
         </div>
-    @else
-        <div x-data="{ selected: [], deleteTarget: null, confirmBulkDelete: false }" class="mt-8">
-            <form
-                method="POST"
-                action="{{ route('conversations.destroyMany') }}"
-                x-ref="bulkForm"
-                x-show="selected.length > 0"
-                x-cloak
-                x-transition
-                class="mb-6 flex items-center justify-between gap-3 rounded-sm border border-[#19140035] bg-[#19140008] px-4 py-3 dark:border-[#3E3E3A] dark:bg-[#3E3E3A33]"
-            >
-                @csrf
-                @method('DELETE')
-
-                <template x-for="id in selected" :key="id">
-                    <input type="hidden" name="ids[]" :value="id">
-                </template>
-
-                <p class="text-sm">
-                    تم تحديد <span class="font-medium" x-text="selected.length"></span> محادثة
-                </p>
-
-                <div class="flex items-center gap-3">
-                    <button
-                        type="button"
-                        @click="selected = []"
-                        class="rounded-sm border border-[#19140035] px-4 py-1.5 text-sm hover:border-black dark:border-[#3E3E3A]"
-                    >
-                        إلغاء التحديد
-                    </button>
-                    <button
-                        type="button"
-                        @click="confirmBulkDelete = true"
-                        class="rounded-sm border border-red-600 px-4 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                    >
-                        حذف المحدد
-                    </button>
-                </div>
-            </form>
-
-            <ul class="divide-y divide-[#19140014] rounded-sm border border-[#19140035] dark:divide-[#3E3E3A] dark:border-[#3E3E3A]">
-                <li class="flex items-center gap-3 px-4 py-2 text-xs text-[#706f6c] dark:text-[#A1A09A]">
-                    <input
-                        type="checkbox"
-                        x-bind:checked="selected.length === {{ $conversations->count() }}"
-                        @change="selected = $event.target.checked ? @js($conversations->modelKeys()) : []"
-                        aria-label="تحديد الكل"
-                        class="shrink-0 rounded-sm border-[#19140035] dark:border-[#3E3E3A]"
-                    >
-                    <span>تحديد الكل</span>
-                </li>
-
-                @foreach ($conversations as $conversation)
-                    <li class="flex items-center gap-3 px-4 py-3 hover:bg-[#19140008] dark:hover:bg-[#3E3E3A33]">
-                        <input
-                            type="checkbox"
-                            x-model="selected"
-                            :value="{{ $conversation->id }}"
-                            aria-label="تحديد {{ $conversation->title }}"
-                            class="shrink-0 rounded-sm border-[#19140035] dark:border-[#3E3E3A]"
-                        >
-
-                        <a
-                            wire:navigate
-                            href="{{ route('conversations.show', $conversation) }}"
-                            class="flex flex-1 items-center justify-between gap-4 min-w-0"
-                        >
-                            <span class="truncate font-medium">{{ $conversation->title }}</span>
-                            <span class="shrink-0 text-xs text-[#706f6c] dark:text-[#A1A09A]">
-                                {{ $conversation->created_at->translatedFormat('j F Y') }}
-                            </span>
-                        </a>
-
-                        <form
-                            method="POST"
-                            action="{{ route('conversations.destroy', $conversation) }}"
-                            x-ref="singleDelete{{ $conversation->id }}"
-                        >
-                            @csrf
-                            @method('DELETE')
-                            <button
-                                type="button"
-                                @click="deleteTarget = { id: {{ $conversation->id }}, title: @js($conversation->title) }"
-                                aria-label="حذف {{ $conversation->title }}"
-                                class="shrink-0 rounded-sm border border-[#19140035] px-2.5 py-1 text-xs text-[#706f6c] hover:border-red-600 hover:text-red-600 dark:border-[#3E3E3A] dark:text-[#A1A09A]"
-                            >
-                                حذف
-                            </button>
-                        </form>
-                    </li>
-                @endforeach
-            </ul>
-
-            <div
-                x-show="deleteTarget !== null"
-                x-cloak
-                x-transition
-                role="dialog"
-                aria-modal="true"
-                class="fixed inset-0 z-50 flex items-center justify-center p-6"
-            >
-                <div class="fixed inset-0 bg-black/50" @click="deleteTarget = null"></div>
-
-                <div class="relative w-full max-w-md rounded-sm border border-[#19140035] bg-white p-6 dark:border-[#3E3E3A] dark:bg-[#161615]">
-                    <h2 class="text-lg font-semibold">حذف المحادثة</h2>
-                    <p class="mt-2 text-sm text-[#706f6c] dark:text-[#A1A09A]">
-                        هل أنت متأكد من حذف محادثة «<span x-text="deleteTarget?.title"></span>»؟
-                        سيؤدي هذا إلى حذف جميع الرسائل المرتبطة بها. لا يمكن التراجع عن هذا الإجراء.
-                    </p>
-
-                    <div class="mt-6 flex items-center justify-end gap-3">
-                        <button
-                            type="button"
-                            @click="deleteTarget = null"
-                            class="rounded-sm border border-[#19140035] px-4 py-1.5 text-sm hover:border-black dark:border-[#3E3E3A]"
-                        >
-                            إلغاء
-                        </button>
-                        <button
-                            type="button"
-                            @click="$refs['singleDelete' + deleteTarget.id].submit()"
-                            class="rounded-sm border border-red-600 bg-red-600 px-4 py-1.5 text-sm text-white hover:bg-red-700"
-                        >
-                            حذف نهائياً
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                x-show="confirmBulkDelete"
-                x-cloak
-                x-transition
-                role="dialog"
-                aria-modal="true"
-                class="fixed inset-0 z-50 flex items-center justify-center p-6"
-            >
-                <div class="fixed inset-0 bg-black/50" @click="confirmBulkDelete = false"></div>
-
-                <div class="relative w-full max-w-md rounded-sm border border-[#19140035] bg-white p-6 dark:border-[#3E3E3A] dark:bg-[#161615]">
-                    <h2 class="text-lg font-semibold">حذف المحادثات المحددة</h2>
-                    <p class="mt-2 text-sm text-[#706f6c] dark:text-[#A1A09A]">
-                        هل أنت متأكد من حذف
-                        <span class="font-medium" x-text="selected.length"></span>
-                        محادثة؟
-                        سيؤدي هذا إلى حذف جميع الرسائل المرتبطة بها. لا يمكن التراجع عن هذا الإجراء.
-                    </p>
-
-                    <div class="mt-6 flex items-center justify-end gap-3">
-                        <button
-                            type="button"
-                            @click="confirmBulkDelete = false"
-                            class="rounded-sm border border-[#19140035] px-4 py-1.5 text-sm hover:border-black dark:border-[#3E3E3A]"
-                        >
-                            إلغاء
-                        </button>
-                        <button
-                            type="button"
-                            @click="$refs.bulkForm.submit()"
-                            class="rounded-sm border border-red-600 bg-red-600 px-4 py-1.5 text-sm text-white hover:bg-red-700"
-                        >
-                            حذف نهائياً
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
+    </div>
 @endsection

@@ -18,7 +18,7 @@ class DestroyManyConversationsRequest extends FormRequest
     {
         return [
             'ids' => ['array'],
-            'ids.*' => ['integer'],
+            'ids.*' => ['string', 'ulid'],
         ];
     }
 }

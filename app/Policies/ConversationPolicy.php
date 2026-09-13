@@ -16,4 +16,9 @@ class ConversationPolicy
     {
         return $user->id === $conversation->user_id;
     }
+
+    public function update(User $user, Conversation $conversation): bool
+    {
+        return $user->id === $conversation->user_id;
+    }
 }
