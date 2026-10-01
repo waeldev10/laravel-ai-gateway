@@ -21,6 +21,7 @@ class RegisteredUserController extends Controller
     {
         $this->authentication->register($request->validated(), $request);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('conversations.create', absolute: false))
+            ->with('toast', ['type' => 'success', 'title' => 'تم إنشاء الحساب', 'message' => 'مرحباً بك في بوابة الذكاء الاصطناعي.']);
     }
 }

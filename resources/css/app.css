@@ -1,11 +1,133 @@
 @import 'tailwindcss';
+@custom-variant dark (&:is(.dark *));
+
+
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source "../**/*.blade.php";
 @source "../**/*.js";
 
+@font-face {
+        font-family: 'Tajawal';
+        src: url('../../public/assets/fonts/Tajawal/Tajawal-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+    
+  
+    @font-face {
+        font-family: 'Tajawal';
+        src: url('../../public/assets/fonts/Tajawal/Tajawal-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    /* @font-face {
+        font-family: 'Tajawal';
+        src: url('../../public/assets/fonts/Tajawal/Tajawal-ExtraBold.woff2') format('woff2');
+        font-weight: 800;
+        font-style: normal;
+        font-display: swap;
+    } */
+    
+
+    /* @font-face {
+        font-family: 'Tajawal';
+        src: url('../../public/assets/fonts/Tajawal/Tajawal-Light.woff2') format('woff2');
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap;
+    } */
+
 @theme {
+    --font-sans: "Tajawal", sans-serif;
+    --font-heading: "Tajawal", sans-serif;
     --font-sans: 'Tajawal', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Semantic UI color tokens.
+   Values are rendered from `config/ui.php` defaults by
+   `components/theme/ui-colors.blade.php` (`:root` = light, `.dark` = dark);
+   a browser-local `localStorage.ui_colors` palette (strict #RRGGBB only,
+   validated before use) overrides them via an inline `<html>` style.
+   These classes are the only place that maps tokens to UI roles, so a
+   customization propagates consistently without replacing every Tailwind
+   color class. Hover uses opacity (visible for any custom color);
+   focus uses the token itself with an offset so it stays visible in
+   both light and dark schemes. */
+.ui-primary-btn {
+    background-color: var(--color-primary);
+    color: var(--color-primary-text);
+}
+.ui-primary-btn:hover {
+    opacity: 0.9;
+}
+.ui-primary-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+.ui-primary-surface {
+    background-color: var(--color-primary);
+    color: var(--color-primary-text);
+}
+.ui-link {
+    color: var(--color-link);
+}
+.ui-link:hover {
+    opacity: 0.8;
+}
+.ui-accent-soft {
+    background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.dark .ui-accent-soft {
+    background-color: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+/* Subtle scrollbars for containers that opt in (e.g. the sidebar list):
+   thin, rounded thumb on a transparent track, zinc in both schemes so it
+   stays neutral next to any custom primary color. Layout/width/overflow
+   behavior is untouched — this only repaints the native scrollbar. */
+.ui-scroll-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(161 161 170 / 0.55) transparent;
+}
+.ui-scroll-subtle::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.ui-scroll-subtle::-webkit-scrollbar-track {
+    background: transparent;
+}
+.ui-scroll-subtle::-webkit-scrollbar-thumb {
+    background: rgb(161 161 170 / 0.45);
+    border-radius: 9999px;
+}
+.dark .ui-scroll-subtle::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.22);
+}
+.ui-scroll-subtle::-webkit-scrollbar-thumb:hover {
+    background: rgb(161 161 170 / 0.75);
+}
+.dark .ui-scroll-subtle::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 0.38);
+}
+
+/* Checkboxes follow the primary token via the native `accent-color`
+   mechanism: no extra state, no requests, no hardcoded fill color.
+   Checked fill + checkmark track `--color-primary` live (Settings preview
+   updates the variable in place; a saved palette is re-applied from
+   localStorage on every load), while
+   unchecked borders/backgrounds keep their existing theme classes. The
+   browser picks the checkmark contrast automatically, and focus stays
+   visible in both schemes through the same token. */
+.ui-checkbox {
+    accent-color: var(--color-primary);
+}
+.ui-checkbox:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }

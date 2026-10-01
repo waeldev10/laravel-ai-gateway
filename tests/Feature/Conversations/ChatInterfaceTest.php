@@ -21,7 +21,7 @@ describe('chat page rendering', function () {
             ->assertOk()
             ->assertSee('محادثة الواجهة')
             ->assertSee('العودة إلى المحادثات')
-            ->assertSee('href="'.route('conversations.index').'"', false);
+            ->assertSee('href="'.route('conversations.search').'"', false);
     });
 
     test('an empty conversation renders the empty state', function () {

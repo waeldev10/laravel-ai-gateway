@@ -23,7 +23,7 @@ test('new users can register', function () {
         'password_confirmation' => 'password',
     ]);
 
-    $response->assertRedirect(route('dashboard'));
+    $response->assertRedirect(route('conversations.create'));
 
     $user = User::where('email', 'test@example.com')->first();
 

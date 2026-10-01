@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('messages', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('conversation_id')
+            $table->ulid('id')->primary();
+            $table->foreignUlid('conversation_id')
                 ->constrained()
                 ->cascadeOnDelete();
             $table->string('role');

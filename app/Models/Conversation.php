@@ -2,18 +2,28 @@
 
 namespace App\Models;
 
-use Database\Factories\ConversationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'title'])]
+#[Fillable(['user_id', 'title', 'pinned_at'])]
 class Conversation extends Model
 {
-    /** @use HasFactory<ConversationFactory> */
-    use HasFactory;
+    /** @use HasFactory<Conversation> */
+    use HasFactory, HasUlids;
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'pinned_at' => 'datetime',
+        ];
+    }
 
     public function user(): BelongsTo
     {

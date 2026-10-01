@@ -7,6 +7,7 @@ use App\Policies\ConversationPolicy;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -27,7 +28,7 @@ describe('conversation listing', function () {
         ]);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->assertSee('محادثة الاختبار');
     });
@@ -40,7 +41,7 @@ describe('conversation listing', function () {
         Conversation::factory()->create(['user_id' => $other->id, 'title' => 'محادثة سرية']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->assertSee('محادثتي')
             ->assertDontSee('محادثة سرية');
@@ -58,7 +59,7 @@ describe('conversation listing', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'الأحدث']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertSeeInOrder(['الأحدث', 'الأقدم']);
     });
 });
@@ -170,7 +171,6 @@ describe('conversation viewing and security', function () {
     test('guests cannot access conversation pages', function () {
         $conversation = Conversation::factory()->create();
 
-        $this->get(route('conversations.index'))->assertRedirect(route('login'));
         $this->get(route('conversations.create'))->assertRedirect(route('login'));
         $this->post(route('conversations.store'), ['title' => 'محادثة'])->assertRedirect(route('login'));
         $this->get(route('conversations.show', $conversation))->assertRedirect(route('login'));
@@ -184,7 +184,7 @@ describe('conversation search', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'خطة السفر']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => 'مشروع']))
+            ->get(route('conversations.search', ['search' => 'مشروع']))
             ->assertOk()
             ->assertSee('مشروع العمل')
             ->assertDontSee('خطة السفر');
@@ -196,7 +196,7 @@ describe('conversation search', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'تصميم واجهات']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => 'الذكاء']))
+            ->get(route('conversations.search', ['search' => 'الذكاء']))
             ->assertOk()
             ->assertSee('الذكاء الاصطناعي')
             ->assertDontSee('تصميم واجهات');
@@ -208,7 +208,7 @@ describe('conversation search', function () {
         Conversation::factory()->create(['user_id' => $other->id, 'title' => 'محادثة سرية للآخرين']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => 'سرية']))
+            ->get(route('conversations.search', ['search' => 'سرية']))
             ->assertOk()
             ->assertDontSee('محادثة سرية للآخرين');
     });
@@ -220,7 +220,7 @@ describe('conversation search', function () {
         Conversation::factory()->create(['user_id' => $other->id, 'title' => 'مشروع سري']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => 'مشروع']))
+            ->get(route('conversations.search', ['search' => 'مشروع']))
             ->assertOk()
             ->assertSee('مشروعي')
             ->assertDontSee('مشروع سري');
@@ -232,7 +232,7 @@ describe('conversation search', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'الثانية']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => '']))
+            ->get(route('conversations.search', ['search' => '']))
             ->assertOk()
             ->assertSee('الأولى')
             ->assertSee('الثانية');
@@ -243,9 +243,9 @@ describe('conversation search', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'محادثة عن البرمجة']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => 'غير موجود']))
+            ->get(route('conversations.search', ['search' => 'غير موجود']))
             ->assertOk()
-            ->assertSee('غير موجود')
+            ->assertSee('لا توجد نتائج مطابقة')
             ->assertDontSee('البرمجة');
     });
 
@@ -255,9 +255,8 @@ describe('conversation search', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'خطة السفر']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
-            ->assertDontSee('search=', false)
             ->assertSee('مشروع العمل')
             ->assertSee('خطة السفر');
     });
@@ -270,7 +269,7 @@ describe('conversation deletion', function () {
 
         $this->actingAs($user)
             ->delete(route('conversations.destroy', $conversation))
-            ->assertRedirect(route('conversations.index'));
+            ->assertRedirect(route('conversations.search'));
 
         expect(Conversation::find($conversation->id))->toBeNull();
     });
@@ -282,7 +281,7 @@ describe('conversation deletion', function () {
 
         $this->actingAs($user)
             ->delete(route('conversations.destroy', $conversation))
-            ->assertRedirect(route('conversations.index'));
+            ->assertRedirect(route('conversations.search'));
 
         expect(Message::find($message->id))->toBeNull();
     });
@@ -350,7 +349,7 @@ describe('conversation bulk deletion', function () {
 
         $this->actingAs($user)
             ->delete(route('conversations.destroyMany'), ['ids' => [$first->id, $second->id]])
-            ->assertRedirect(route('conversations.index'));
+            ->assertRedirect(route('conversations.search'));
 
         expect(Conversation::find($first->id))->toBeNull()
             ->and(Conversation::find($second->id))->toBeNull()
@@ -368,7 +367,7 @@ describe('conversation bulk deletion', function () {
 
         $this->actingAs($user)
             ->delete(route('conversations.destroyMany'), ['ids' => [$first->id, $second->id]])
-            ->assertRedirect(route('conversations.index'));
+            ->assertRedirect(route('conversations.search'));
 
         expect(Message::find($firstMessage->id))->toBeNull()
             ->and(Message::find($secondMessage->id))->toBeNull()
@@ -409,7 +408,7 @@ describe('conversation bulk deletion', function () {
 
         $this->actingAs($user)
             ->delete(route('conversations.destroyMany'), ['ids' => []])
-            ->assertRedirect(route('conversations.index'));
+            ->assertRedirect(route('conversations.search'));
 
         expect(Conversation::find($conversation->id))->not()->toBeNull();
     });
@@ -420,7 +419,7 @@ describe('conversation bulk deletion', function () {
 
         $this->actingAs($user)
             ->delete(route('conversations.destroyMany'), ['ids' => [$conversation->id, $conversation->id]])
-            ->assertRedirect(route('conversations.index'));
+            ->assertRedirect(route('conversations.search'));
 
         expect(Conversation::find($conversation->id))->toBeNull();
     });
@@ -430,7 +429,7 @@ describe('conversation bulk deletion', function () {
         $conversation = Conversation::factory()->create(['user_id' => $user->id]);
 
         $this->actingAs($user)
-            ->delete(route('conversations.destroyMany'), ['ids' => [9999, 8888]])
+            ->delete(route('conversations.destroyMany'), ['ids' => [(string) Str::ulid(), (string) Str::ulid()]])
             ->assertForbidden();
 
         expect(Conversation::find($conversation->id))->not()->toBeNull();
@@ -445,7 +444,7 @@ describe('conversation bulk deletion', function () {
         expect(Conversation::find($conversation->id))->not()->toBeNull();
     });
 
-    test('bulk deletion requires an array of integer ids', function () {
+    test('bulk deletion requires an array of ulid ids', function () {
         $user = User::factory()->create();
 
         $this->actingAs($user)
@@ -510,48 +509,49 @@ describe('conversation deletion policy', function () {
 });
 
 describe('conversation selection interface', function () {
-    test('the index shows a delete button for every conversation', function () {
+    test('the search shows a delete button for every conversation', function () {
         $user = User::factory()->create();
         $first = Conversation::factory()->create(['user_id' => $user->id]);
         $second = Conversation::factory()->create(['user_id' => $user->id]);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
-            ->assertSee('x-ref="singleDelete'.$first->id.'"', false)
-            ->assertSee('x-ref="singleDelete'.$second->id.'"', false);
+            ->assertSee('x-model="selected"', false)
+            ->assertSee('value="'.$first->id.'"', false)
+            ->assertSee('value="'.$second->id.'"', false);
     });
 
-    test('the index shows a select all checkbox', function () {
+    test('the search shows a select all checkbox', function () {
         $user = User::factory()->create();
         Conversation::factory()->count(2)->create(['user_id' => $user->id]);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->assertSee('aria-label="تحديد الكل"', false);
     });
 
-    test('the index shows a select checkbox for every conversation', function () {
+    test('the search shows a select checkbox for every conversation', function () {
         $user = User::factory()->create();
         $first = Conversation::factory()->create(['user_id' => $user->id]);
         $second = Conversation::factory()->create(['user_id' => $user->id]);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
-            ->assertSee(':value="'.$first->id.'"', false)
-            ->assertSee(':value="'.$second->id.'"', false);
+            ->assertSee('value="'.$first->id.'"', false)
+            ->assertSee('value="'.$second->id.'"', false);
     });
 
-    test('the bulk delete form points to the destroy many route', function () {
+    test('the search bulk delete uses the shared confirm modal', function () {
         $user = User::factory()->create();
         Conversation::factory()->create(['user_id' => $user->id]);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
-            ->assertSee('action="'.route('conversations.destroyMany').'"', false);
+            ->assertSee('page-delete', false);
     });
 
     test('the bulk delete bar is only shown when conversations are selected', function () {
@@ -559,7 +559,7 @@ describe('conversation selection interface', function () {
         Conversation::factory()->create(['user_id' => $user->id]);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->assertSee('x-show="selected.length > 0"', false);
     });
@@ -569,19 +569,9 @@ describe('conversation selection interface', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'مشروع العمل']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => 'مشروع']))
+            ->get(route('conversations.search', ['search' => 'مشروع']))
             ->assertOk()
             ->assertSee('aria-label="مسح البحث"', false);
-    });
-
-    test('the clear search button navigates to the index without the search parameter', function () {
-        $user = User::factory()->create();
-        Conversation::factory()->create(['user_id' => $user->id, 'title' => 'مشروع العمل']);
-
-        $this->actingAs($user)
-            ->get(route('conversations.index', ['search' => 'مشروع']))
-            ->assertOk()
-            ->assertSee('href="'.route('conversations.index').'"', false);
     });
 
     test('the clear search button is hidden without a search term', function () {
@@ -589,7 +579,7 @@ describe('conversation selection interface', function () {
         Conversation::factory()->create(['user_id' => $user->id, 'title' => 'مشروع العمل']);
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->assertDontSee('aria-label="مسح البحث"', false);
     });

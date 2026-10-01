@@ -1,0 +1,2 @@
+@props(['error' => false])
+<textarea {{ $attributes->merge(['class' => 'mt-1.5 w-full rounded-xl border bg-white dark:bg-[#212121] px-3.5 py-2.5 text-sm text-[#0f0f0f] dark:text-[#ececec] placeholder:text-zinc-500 transition focus:outline-none focus:ring-2 '.($error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-black/10 dark:border-white/10 focus:border-black/30 dark:focus:border-white/30 focus:ring-black/5 dark:focus:ring-white/10')]) }}>{{ $slot }}</textarea>

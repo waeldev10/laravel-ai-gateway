@@ -4,10 +4,14 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\ProfileController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check()
+        ? redirect()->route('conversations.create')
+        : redirect()->route('login');
 })->name('home');
 
 Route::middleware('guest')->group(function () {
@@ -23,23 +27,33 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('dashboard', fn () => view('dashboard'))
-        ->name('dashboard');
-
-    Route::get('conversations', [ConversationController::class, 'index'])
-        ->name('conversations.index');
     Route::get('conversations/create', [ConversationController::class, 'create'])
         ->name('conversations.create');
     Route::post('conversations', [ConversationController::class, 'store'])
         ->name('conversations.store');
+    // Legacy listing URL: the standalone index page was removed in favor of
+    // the dedicated search experience. Keep GET from ever 405ing (a DELETE
+    // route shares this URI) by redirecting to search, preserving any query.
+    Route::get('conversations', function (Request $request) {
+        return redirect()->route('conversations.search', $request->query());
+    });
     Route::delete('conversations', [ConversationController::class, 'destroyMany'])
         ->name('conversations.destroyMany');
+    Route::get('conversations/search', [ConversationController::class, 'search'])
+        ->name('conversations.search');
     Route::get('conversations/{conversation}', [ConversationController::class, 'show'])
         ->name('conversations.show');
+    Route::patch('conversations/{conversation}', [ConversationController::class, 'update'])
+        ->name('conversations.update');
+    Route::patch('conversations/{conversation}/pin', [ConversationController::class, 'togglePin'])
+        ->name('conversations.pin');
     Route::delete('conversations/{conversation}', [ConversationController::class, 'destroy'])
         ->name('conversations.destroy');
     Route::post('conversations/{conversation}/messages', [MessageController::class, 'store'])
         ->name('conversations.messages.store');
+
+    Route::get('profile', [ProfileController::class, 'show'])
+        ->name('profile.show');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
