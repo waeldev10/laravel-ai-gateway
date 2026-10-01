@@ -43,7 +43,12 @@ describe('sidebar bounded loading', function () {
     test('sidebar renders at most the recent cap plus all pinned, with a link to search', function () {
         $user = User::factory()->create();
 
-        foreach (range(1, 35) as $i) {
+        // Boundaries derive from the service cap so the test stays honest if
+        // the cap is ever retuned: newest $cap entries visible, older hidden.
+        $cap = ConversationService::SIDEBAR_RECENT_LIMIT;
+        $total = $cap + 5;
+
+        foreach (range(1, $total) as $i) {
             Conversation::factory()->create([
                 'user_id' => $user->id,
                 'title' => "Conversation {$i}",
@@ -54,9 +59,9 @@ describe('sidebar bounded loading', function () {
         $this->actingAs($user);
         $html = Livewire::test(SidebarConversations::class)->html();
 
-        expect($html)->toContain('Conversation 35')
-            ->and($html)->toContain('Conversation 6')
-            ->and($html)->not()->toContain('Conversation 5')
+        expect($html)->toContain("Conversation {$total}")
+            ->and($html)->toContain('Conversation '.($total - $cap + 1))
+            ->and($html)->not()->toContain('Conversation '.($total - $cap))
             ->and($html)->toContain('عرض كل المحادثات');
     });
 
