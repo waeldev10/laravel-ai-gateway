@@ -190,7 +190,7 @@
                 </div>
             @endif
         @endforeach
-        @if($messages->count() >= \App\Livewire\ConversationMessages::NAVIGATOR_THRESHOLD)
+        @if($messages->count() >= \App\Livewire\Chat\ConversationMessages::NAVIGATOR_THRESHOLD)
             <div class="pointer-events-none fixed left-2 top-1/2 z-20 flex -translate-y-1/2">
                 <div class="group/carousel pointer-events-auto flex max-h-[46vh] flex-col justify-center gap-[3px] overflow-y-auto overscroll-contain rounded-xl border border-transparent px-1.5 py-2 [scrollbar-width:thin] transition-colors duration-150 hover:border-black/10 hover:bg-white/80 hover:backdrop-blur-sm hover:shadow-md focus-within:border-black/10 focus-within:bg-white/80 focus-within:backdrop-blur-sm focus-within:shadow-md dark:hover:border-white/10 dark:hover:bg-zinc-900/80 dark:focus-within:border-white/10 dark:focus-within:bg-zinc-900/80" role="group" aria-label="التنقل بين الرسائل">
                     @foreach($messages as $i => $m)

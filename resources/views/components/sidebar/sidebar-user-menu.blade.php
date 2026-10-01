@@ -70,7 +70,8 @@
             @auth<div class="my-1.5 h-px bg-black/10 dark:bg-white/10" role="separator"></div><form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" role="menuitem"
                 class="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 focus-visible:bg-red-50 dark:focus-visible:bg-red-500/10 transition-colors min-h-[40px] text-start">
                 <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>
-                <span>تسجيل الخروج</span></button></form>@endauth
+                <span>تسجيل الخروج</span></button></form>
+            @endauth
         </div>
     </div>
 </div>

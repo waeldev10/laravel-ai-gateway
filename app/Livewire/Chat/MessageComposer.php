@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
 use App\Services\Conversation\ConversationService;
@@ -57,6 +57,6 @@ class MessageComposer extends Component
 
     public function render()
     {
-        return view('livewire.message-composer');
+        return view('livewire.chat.message-composer');
     }
 }

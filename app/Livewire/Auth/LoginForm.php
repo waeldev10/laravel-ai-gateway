@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Auth;
 
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\Auth\AuthenticationService;
@@ -48,6 +48,6 @@ class LoginForm extends Component
 
     public function render()
     {
-        return view('livewire.login-form');
+        return view('livewire.auth.login-form');
     }
 }

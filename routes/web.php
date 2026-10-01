@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProfileController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -26,12 +27,16 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('conversations', [ConversationController::class, 'index'])
-        ->name('conversations.index');
     Route::get('conversations/create', [ConversationController::class, 'create'])
         ->name('conversations.create');
     Route::post('conversations', [ConversationController::class, 'store'])
         ->name('conversations.store');
+    // Legacy listing URL: the standalone index page was removed in favor of
+    // the dedicated search experience. Keep GET from ever 405ing (a DELETE
+    // route shares this URI) by redirecting to search, preserving any query.
+    Route::get('conversations', function (Request $request) {
+        return redirect()->route('conversations.search', $request->query());
+    });
     Route::delete('conversations', [ConversationController::class, 'destroyMany'])
         ->name('conversations.destroyMany');
     Route::get('conversations/search', [ConversationController::class, 'search'])

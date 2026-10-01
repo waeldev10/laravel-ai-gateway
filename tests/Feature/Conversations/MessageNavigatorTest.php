@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\ConversationMessages;
+use App\Livewire\Chat\ConversationMessages;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -44,7 +44,7 @@ describe('message navigator', function () {
     });
 
     test('navigator sits at the viewport edge with tiny horizontal lines', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         // Fixed to the viewport (outside the message column entirely) and
         // vertically centered; markers are 2px horizontal strokes that
@@ -59,7 +59,7 @@ describe('message navigator', function () {
     });
 
     test('carousel is transparent idle and paints one panel on hover only', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         // Idle: transparent border, no background — only the lines show.
         // Hover/focus: the same box paints its panel (paint-only change,
@@ -72,7 +72,7 @@ describe('message navigator', function () {
     });
 
     test('tooltips belong to the row previews, never to the marker lines', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         preg_match_all('/<button\b(?:\{\{.*?\}\}|"[^"]*"|\'[^\']*\'|[^>])*>/s', $source, $matches);
 
@@ -170,7 +170,7 @@ describe('first and last scroll controls', function () {
     });
 
     test('scroll and hover paths involve no livewire calls', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         // Copy, tooltip hover, marker jumps and edge scrolling are Alpine/DOM only.
         expect(substr_count($source, '$wire.'))->toBe(1)

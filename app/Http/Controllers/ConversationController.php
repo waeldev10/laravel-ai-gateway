@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DestroyManyConversationsRequest;
-use App\Http\Requests\ListConversationsRequest;
 use App\Http\Requests\StoreConversationRequest;
 use App\Http\Requests\UpdateConversationRequest;
 use App\Models\Conversation;
@@ -19,16 +18,6 @@ class ConversationController extends Controller
         private readonly ConversationService $conversations,
         private readonly MessageService $messages,
     ) {}
-
-    public function index(ListConversationsRequest $request): View
-    {
-        $search = $request->validated('search');
-
-        return view('conversations.index', [
-            'conversations' => $this->conversations->listFor($request->user(), $search),
-            'search' => $search,
-        ]);
-    }
 
     public function create(): View
     {
@@ -64,7 +53,7 @@ class ConversationController extends Controller
 
         $this->conversations->deleteFor($request->user(), $conversation);
 
-        return redirect()->route('conversations.index')
+        return redirect()->route('conversations.search')
             ->with('toast', ['type' => 'success', 'title' => 'تم حذف المحادثة', 'message' => 'تم حذف المحادثة نهائياً.']);
     }
 
@@ -93,7 +82,7 @@ class ConversationController extends Controller
         $ids = $request->validated('ids', []);
         $this->conversations->deleteMany($request->user(), $ids);
 
-        return redirect()->route('conversations.index')
+        return redirect()->route('conversations.search')
             ->with('toast', ['type' => 'success', 'title' => 'تم حذف المحادثات', 'message' => 'تم حذف '.count($ids).' من المحادثات نهائياً.']);
     }
 }

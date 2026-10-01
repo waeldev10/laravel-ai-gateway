@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\ProfileForm;
+use App\Livewire\Profile\ProfileForm;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -23,7 +23,7 @@ describe('profile authentication', function () {
             ->assertSee('كلمة السر')
             ->assertSee('ليلى حسن', false)
             ->assertSee('laila@example.com', false)
-            ->assertSeeLivewire('profile-form');
+            ->assertSeeLivewire('profile.profile-form');
     });
 });
 
@@ -216,7 +216,7 @@ describe('user menu profile integration', function () {
         $user = User::factory()->create();
 
         $html = $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->getContent();
 
@@ -235,7 +235,7 @@ describe('user menu profile integration', function () {
         $user = User::factory()->create();
 
         $html = $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->getContent();
 
@@ -250,7 +250,7 @@ describe('theme persistence infrastructure', function () {
         $authHtml = $this->get(route('login'))->assertOk()->getContent();
 
         $user = User::factory()->create();
-        $appHtml = $this->actingAs($user)->get(route('conversations.index'))->assertOk()->getContent();
+        $appHtml = $this->actingAs($user)->get(route('conversations.search'))->assertOk()->getContent();
 
         foreach ([$appHtml, $authHtml] as $html) {
             // Single shared partial output: persisted key read before first paint.

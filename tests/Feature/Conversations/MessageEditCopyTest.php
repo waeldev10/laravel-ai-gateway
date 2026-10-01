@@ -1,7 +1,7 @@
 <?php
 
 use App\Enums\MessageRole;
-use App\Livewire\ConversationMessages;
+use App\Livewire\Chat\ConversationMessages;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -38,7 +38,7 @@ describe('message edit and copy buttons', function () {
     });
 
     test('copy is fully client-side with per-message checkmark feedback', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         expect($source)->toContain('navigator.clipboard.writeText')
             // The single Livewire call in this view is the edit save.
@@ -52,7 +52,7 @@ describe('message edit and copy buttons', function () {
     });
 
     test('inline editor is a tall single-line input, not a textarea', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         expect($source)->toContain('data-edit-input')
             ->and($source)->toContain('<input type="text"')
@@ -62,7 +62,7 @@ describe('message edit and copy buttons', function () {
     });
 
     test('editor spans the message width while the bubble keeps its size', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         // Wide editor column with the bubble capped to its previous size,
         // so long bubbles render exactly as before.
@@ -71,7 +71,7 @@ describe('message edit and copy buttons', function () {
     });
 
     test('edit mode fully replaces the bubble and actions in place', function () {
-        $source = file_get_contents(resource_path('views/livewire/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
 
         // Both the message bubble and its action row hide while editing, so
         // no original text stays visible above, beside, or behind the input.

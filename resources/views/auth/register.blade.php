@@ -5,5 +5,5 @@
         <h1 class="text-2xl font-semibold tracking-tight">إنشاء حساب</h1>
         <p class="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">ابدأ باستخدام دردشة الويب الذكية.</p>
     </div>
-    @livewire('register-form')
+    @livewire('auth.register-form')
 @endsection

@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\MessageComposer;
-use App\Livewire\SidebarConversations;
+use App\Livewire\Chat\MessageComposer;
+use App\Livewire\Sidebar\SidebarConversations;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -45,8 +45,8 @@ describe('first message livewire navigation', function () {
     });
 
     test('the transition uses livewire navigation instead of a full reload', function () {
-        $source = file_get_contents(resource_path('views/livewire/message-composer.blade.php'));
-        $component = file_get_contents(app_path('Livewire/MessageComposer.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
+        $component = file_get_contents(app_path('Livewire/Chat/MessageComposer.php'));
 
         // New-chat submit navigates SPA-style; links across the flow keep wire:navigate.
         expect($component)->toContain('navigate: true')

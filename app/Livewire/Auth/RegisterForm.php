@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Auth;
 
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Services\Auth\AuthenticationService;
@@ -48,6 +48,6 @@ class RegisterForm extends Component
 
     public function render()
     {
-        return view('livewire.register-form');
+        return view('livewire.auth.register-form');
     }
 }

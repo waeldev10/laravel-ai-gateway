@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Conversation;
 
 use App\Services\Conversation\ConversationService;
 use Illuminate\Support\Facades\Auth;
@@ -98,8 +98,7 @@ class ConversationSearch extends Component
 
     public function togglePin(string $id, ConversationService $service): void
     {
-        $conversation = $service->findFor(Auth::user(), $id);
-        $conversation = $service->setPinnedFor(Auth::user(), $conversation, $conversation->pinned_at === null);
+        $conversation = $service->togglePinFor(Auth::user(), $id);
 
         $this->dispatch('conversations-changed');
         $this->dispatch('toast',
@@ -121,7 +120,7 @@ class ConversationSearch extends Component
     {
         $results = $service->searchPaginated(Auth::user(), $this->search !== '' ? $this->search : null, $this->perPage);
 
-        return view('livewire.conversation-search', [
+        return view('livewire.conversation.conversation-search', [
             'results' => $results,
             'groups' => $service->splitPinned($results->getCollection()),
             'ids' => $results->getCollection()->map(fn ($c) => (string) $c->id)->all(),

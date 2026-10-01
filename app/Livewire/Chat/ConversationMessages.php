@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
 use App\Models\Message;
@@ -63,7 +63,7 @@ class ConversationMessages extends Component
 
     public function render(MessageService $messages)
     {
-        return view('livewire.conversation-messages', [
+        return view('livewire.chat.conversation-messages', [
             'messages' => $messages->listFor(Auth::user(), $this->conversation),
         ]);
     }

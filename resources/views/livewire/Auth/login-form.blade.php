@@ -5,7 +5,7 @@
 <form wire:submit="login" class="space-y-4">
     <div>
         <x-ui.label for="email">البريد الإلكتروني</x-ui.label>
-        <x-ui.input id="email" type="email" wire:model="email" required autofocus autocomplete="email" :error="$errors->has('email')" placeholder="name@example.com" />
+        <x-ui.input id="email" type="email" wire:model="email" autofocus autocomplete="email" :error="$errors->has('email')" placeholder="name@example.com" />
         <x-ui.input-error for="email" />
     </div>
     <div>
@@ -15,7 +15,7 @@
                 <a href="{{ route('password.request') }}" class="text-xs text-zinc-500 dark:text-zinc-400 underline underline-offset-4 hover:text-black dark:hover:text-white">نسيت كلمة المرور؟</a>
             @endif
         </div>
-        <x-ui.password-input id="password" wire:model="password" required autocomplete="current-password" :error="$errors->has('password')" placeholder="••••••••" />
+        <x-ui.password-input id="password" wire:model="password" autocomplete="current-password" :error="$errors->has('password')" placeholder="••••••••" />
         <x-ui.input-error for="password" />
     </div>
     <div class="flex items-center gap-2">

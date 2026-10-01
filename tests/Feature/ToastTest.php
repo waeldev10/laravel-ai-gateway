@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\ConversationSearch;
-use App\Livewire\SidebarConversations;
+use App\Livewire\Conversation\ConversationSearch;
+use App\Livewire\Sidebar\SidebarConversations;
 use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,13 +15,13 @@ describe('toast from controllers', function () {
         $conversation = Conversation::factory()->create(['user_id' => $user->id, 'title' => 'Old']);
 
         $this->actingAs($user)
-            ->from(route('conversations.index'))
+            ->from(route('conversations.search'))
             ->patch(route('conversations.update', $conversation), ['title' => 'Toasted'])
             ->assertRedirect()
             ->assertSessionHas('toast', fn ($toast) => $toast['type'] === 'success');
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->assertSee('تمت إعادة التسمية', false);
     });

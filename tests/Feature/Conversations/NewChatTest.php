@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\MessageComposer;
-use App\Livewire\SidebarConversations;
+use App\Livewire\Chat\MessageComposer;
+use App\Livewire\Sidebar\SidebarConversations;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;

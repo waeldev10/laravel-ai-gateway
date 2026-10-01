@@ -1,15 +1,14 @@
 <?php
 
-use App\Livewire\LoginForm;
-use App\Livewire\MessageComposer;
-use App\Livewire\ProfileForm;
-use App\Livewire\RegisterForm;
-use App\Livewire\UiColorSettings;
+use App\Livewire\Auth\LoginForm;
+use App\Livewire\Auth\RegisterForm;
+use App\Livewire\Chat\MessageComposer;
+use App\Livewire\Profile\ProfileForm;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
-use App\Services\Theme\UiColorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Livewire;
 
@@ -173,33 +172,39 @@ describe('settings validation in Arabic', function () {
     test('invalid color values produce Arabic messages', function () {
         $message = (string) Validator::make(
             ['primary' => 'red'],
-            ['primary' => ['required', 'string', UiColorService::HEX_RULE]]
+            ['primary' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/']]
         )->errors()->first();
 
         expect($message)->toBe('صيغة اللون الرئيسي غير صالحة.');
 
         $missing = (string) Validator::make(
             [],
-            ['primary' => ['required', 'string', UiColorService::HEX_RULE]]
+            ['primary' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/']]
         )->errors()->first();
 
         expect($missing)->toBe('حقل اللون الرئيسي مطلوب.');
     });
 
-    test('invalid colors are rejected through the component without persisting', function () {
+    test('invalid colors never reach the server and the format stays strict', function () {
+        // UI colors are browser-local: no component class, no service, and
+        // no users.ui_colors column exist, so there is nothing server-side
+        // to persist. The shared #RRGGBB format still rejects hostile values
+        // wherever it is referenced.
+        expect(class_exists('App\Livewire\Settings\UiColorSettings'))->toBeFalse()
+            ->and(class_exists('App\Services\Theme\UiColorService'))->toBeFalse()
+            ->and(Schema::hasColumn('users', 'ui_colors'))->toBeFalse();
+
+        $validator = Validator::make(
+            ['primary' => 'url(evil)'],
+            ['primary' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/']]
+        );
+
+        expect($validator->fails())->toBeTrue();
+
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Livewire::test(UiColorSettings::class)
-            ->call('save', [
-                'primary' => 'url(evil)',
-                'primary_text' => '#FFFFFF',
-                'accent' => '#7C3AED',
-                'link' => '#1D4ED8',
-            ])
-            ->assertDispatched('toast', type: 'error');
-
-        expect($user->refresh()->ui_colors)->toBeNull();
+        expect(array_key_exists('ui_colors', $user->getAttributes()))->toBeFalse();
     });
 });
 
@@ -208,7 +213,7 @@ describe('no raw field names leak to the user', function () {
         $messages = [
             (string) Validator::make(['content' => ''], ['content' => ['required']])->errors()->first(),
             (string) Validator::make(['password_confirmation' => 'x'], ['password' => ['required', 'confirmed']])->errors()->first('password'),
-            (string) Validator::make(['primary' => 'red'], ['primary' => ['required', 'string', UiColorService::HEX_RULE]])->errors()->first(),
+            (string) Validator::make(['primary' => 'red'], ['primary' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/']])->errors()->first(),
             (string) Validator::make(['title' => ''], ['title' => ['required']])->errors()->first(),
         ];
 

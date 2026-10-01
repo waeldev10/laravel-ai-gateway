@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\LoginForm;
-use App\Livewire\RegisterForm;
+use App\Livewire\Auth\LoginForm;
+use App\Livewire\Auth\RegisterForm;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;

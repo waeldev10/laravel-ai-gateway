@@ -5,22 +5,22 @@
 <form wire:submit="register" class="space-y-4">
     <div>
         <x-ui.label for="name">الاسم</x-ui.label>
-        <x-ui.input id="name" type="text" wire:model="name" required autofocus autocomplete="name" :error="$errors->has('name')" placeholder="اسمك الكامل" />
+        <x-ui.input id="name" type="text" wire:model="name" autofocus autocomplete="name" :error="$errors->has('name')" placeholder="اسمك الكامل" />
         <x-ui.input-error for="name" />
     </div>
     <div>
         <x-ui.label for="email">البريد الإلكتروني</x-ui.label>
-        <x-ui.input id="email" type="email" wire:model="email" required autocomplete="email" :error="$errors->has('email')" placeholder="name@example.com" />
+        <x-ui.input id="email" type="email" wire:model="email" autocomplete="email" :error="$errors->has('email')" placeholder="name@example.com" />
         <x-ui.input-error for="email" />
     </div>
     <div>
         <x-ui.label for="password">كلمة المرور</x-ui.label>
-        <x-ui.password-input id="password" wire:model="password" required autocomplete="new-password" :error="$errors->has('password')" placeholder="••••••••" />
+        <x-ui.password-input id="password" wire:model="password" autocomplete="new-password" :error="$errors->has('password')" placeholder="••••••••" />
         <x-ui.input-error for="password" />
     </div>
     <div>
         <x-ui.label for="password_confirmation">تأكيد كلمة المرور</x-ui.label>
-        <x-ui.password-input id="password_confirmation" wire:model="password_confirmation" required autocomplete="new-password" placeholder="••••••••" />
+        <x-ui.password-input id="password_confirmation" wire:model="password_confirmation" autocomplete="new-password" placeholder="••••••••" />
     </div>
     <x-ui.button type="submit" wire:loading.attr="disabled" wire:target="register" class="w-full inline-flex items-center justify-center gap-1.5">
         <span wire:loading wire:target="register">

@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\ConversationSearch;
+use App\Livewire\Conversation\ConversationSearch;
 use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -21,6 +21,23 @@ describe('dedicated search page', function () {
 
     test('guests cannot open the search page', function () {
         $this->get(route('conversations.search'))->assertRedirect(route('login'));
+    });
+
+    test('the legacy conversations url redirects to search instead of erroring', function () {
+        $user = User::factory()->create();
+
+        // Authenticated: never a MethodNotAllowed error, query preserved.
+        $this->actingAs($user)
+            ->get('/conversations')
+            ->assertRedirect(route('conversations.search'));
+
+        $this->actingAs($user)
+            ->get('/conversations?search='.urlencode('مشروع'))
+            ->assertRedirect(route('conversations.search', ['search' => 'مشروع']));
+
+        // Guests still go through the auth redirect, never an error page.
+        auth()->logout();
+        $this->get('/conversations')->assertRedirect(route('login'));
     });
 
     test('empty search shows the latest 5 conversations', function () {

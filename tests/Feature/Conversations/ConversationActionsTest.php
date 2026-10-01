@@ -12,7 +12,7 @@ describe('conversation rename', function () {
         $conversation = Conversation::factory()->create(['user_id' => $user->id, 'title' => 'Old title']);
 
         $this->actingAs($user)
-            ->from(route('conversations.index'))
+            ->from(route('conversations.search'))
             ->patch(route('conversations.update', $conversation), ['title' => 'New title'])
             ->assertRedirect();
 
@@ -24,7 +24,7 @@ describe('conversation rename', function () {
         $conversation = Conversation::factory()->create(['user_id' => $user->id, 'title' => 'Old title']);
 
         $this->actingAs($user)
-            ->from(route('conversations.index'))
+            ->from(route('conversations.search'))
             ->patch(route('conversations.update', $conversation), ['title' => ''])
             ->assertSessionHasErrors('title');
 
@@ -59,14 +59,14 @@ describe('conversation pin', function () {
         expect($conversation->pinned_at)->toBeNull();
 
         $this->actingAs($user)
-            ->from(route('conversations.index'))
+            ->from(route('conversations.search'))
             ->patch(route('conversations.pin', $conversation))
             ->assertRedirect();
 
         expect($conversation->refresh()->pinned_at)->not()->toBeNull();
 
         $this->actingAs($user)
-            ->from(route('conversations.index'))
+            ->from(route('conversations.search'))
             ->patch(route('conversations.pin', $conversation))
             ->assertRedirect();
 
@@ -83,7 +83,7 @@ describe('conversation pin', function () {
         $this->actingAs($user)->patch(route('conversations.pin', $old));
 
         $this->actingAs($user)
-            ->get(route('conversations.index'))
+            ->get(route('conversations.search'))
             ->assertOk()
             ->assertSeeInOrder(['Pinned old', 'Fresh']);
     });

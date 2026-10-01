@@ -71,6 +71,6 @@ test('individual deletion and message creation work with ulids', function () {
     $c = Conversation::factory()->create(['user_id' => $user->id]);
     $this->actingAs($user)->post(route('conversations.messages.store', $c), ['content' => 'hello ulid'])->assertRedirect();
     expect($c->messages()->count())->toBe(1);
-    $this->actingAs($user)->delete(route('conversations.destroy', $c))->assertRedirect(route('conversations.index'));
+    $this->actingAs($user)->delete(route('conversations.destroy', $c))->assertRedirect(route('conversations.search'));
     expect(Conversation::find($c->id))->toBeNull();
 });

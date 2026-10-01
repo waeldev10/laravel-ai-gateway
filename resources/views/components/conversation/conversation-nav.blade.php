@@ -1,38 +1,8 @@
 @props(['pinned', 'recent', 'activeId' => null, 'context' => 'sidebar', 'scrollClass' => ''])
 
-{{-- Single conversation-list implementation for sidebar + search page.
-     Grouping comes from ConversationService::splitPinned (one authoritative
-     split, consumed here through the `pinned` / `recent` props): pinned
-     conversations render first under "المثبتة" and never repeat under
-     "الأخيرة", which keeps the existing newest-first ordering. The
-     "المثبتة" header renders only when pinned conversations exist.
-     Each row shows the real `created_at` via the shared ArabicDateTime
-     helper (server-rendered, no extra requests). Presentation differs per
-     context: Search rows always show date + time under the title, while
-     Sidebar rows reveal time only on hover through pure CSS
-     (`group-hover`, no Alpine state, no requests) so the title and the
-     actions menu keep their layout.
-     The actions dropdown is the shared <x-conversation-actions-menu /> component
-     (one button per action: rename, state-aware pin/unpin, share, delete).
-     Opening/closing the menu, checkbox selection and modal visibility are purely
-     browser-local (Alpine): no server request is sent for them. Only confirmed
-     server actions (pin, rename submit, delete submit) call Livewire.
-     Per-item state flows from the trigger button dataset into `currentItem` at
-     open time; `renameItem`/`deleteItem` dispatch browser events carrying the
-     pending id(s) because the rename modal differs by parent Livewire state
-     (plain-form modal in the sidebar vs Alpine modal with a Livewire submit on
-     the search page), while pin calls the enclosing Livewire component's
-     `togglePin` in both contexts (same ConversationService::setPinnedFor action).
-     On the search page, checkbox selection lives in the outer Alpine scope
-     (`selected`); these checkboxes bind to it with `x-model`, so checking,
-     Select All and the count never touch the server.
-     Retrieval/authorization stay in ConversationService/Policy; this partial only
-     renders the provided groups. Hovering or focusing a title shows the full
-     title through the shared title tooltip below (browser-only Alpine state,
-     teleported to <body> so nothing clips it; never the native `title`
-     attribute, never a server request). The actions menu is teleported to <body> so
-     Sidebar overflow/translate boundaries can never clip it. --}}
-<div x-data="{
+
+<div 
+    x-data="{
         listContext: @js($context),
         menuId: null, menuTop: -9999, menuLeft: -9999,
         copiedId: null,
@@ -108,13 +78,20 @@
     }" @scroll="closeMenu()" @scroll.window="closeMenu()" @resize.window="closeMenu()"
     @keydown.escape.window="closeMenu()" @close-item-menus.window="closeMenu()"
     class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-1 py-1 {{ $scrollClass }}">
+
     <x-conversation.title-tip />
+
     @foreach([['label' => 'المثبتة', 'items' => $pinned], ['label' => 'الأخيرة', 'items' => $recent]] as $group)
+
         @if($group['items']->isNotEmpty())
             <p class="px-3 pt-2 pb-0.5 text-[11px] font-medium text-zinc-400 dark:text-zinc-500">{{ $group['label'] }}</p>
+
             @foreach($group['items'] as $c)
+
                 <div class="group relative flex min-h-[44px] items-center gap-1 rounded-xl px-1 transition-colors hover:bg-black/5 dark:hover:bg-white/10 focus-within:bg-black/5 dark:focus-within:bg-white/10 {{ $activeId && (string) $c->id === (string) $activeId ? 'ui-accent-soft font-medium text-black dark:text-white' : 'text-zinc-600 dark:text-zinc-300' }}"
+                   
                     @if($context === 'page') wire:key="conv-{{ $c->id }}" @endif
+
                     @if($activeId && (string) $c->id === (string) $activeId) aria-current="page" @endif>
                     @if($context === 'page')
                         <input type="checkbox" x-model="selected" value="{{ $c->id }}"
@@ -159,9 +136,13 @@
                             </div>
                         </div>
                 </div>
+
             @endforeach
+
         @endif
+
     @endforeach
+
     @if($pinned->isEmpty() && $recent->isEmpty())
         <p class="text-xs text-zinc-400 dark:text-white/50 px-3 py-4 text-center">لا توجد محادثات</p>
     @endif
@@ -169,9 +150,10 @@
     <x-conversation.conversation-actions-menu :context="$context" />
 
     @if($context === 'sidebar')
+
         <x-ui.confirm-modal id="sidebar-delete" title="حذف المحادثة" message="سيتم حذف هذه المحادثة نهائياً. لا يمكن التراجع عن هذا الإجراء." confirmLabel="حذف" cancelLabel="إلغاء" :teleport="true">
             <x-slot:confirm>
-                <form :action="actionUrl" method="POST" @submit="if (busy) { $event.preventDefault(); } else { busy = true; }" class="contents">
+                <form :action="actionUrl" method="POST" @submit.prevent="if (busy) return; busy = true; (async () => { const createUrl = @js(route('conversations.create')); try { const res = await fetch(actionUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: new FormData($el) }); if (!res.ok) { let message = 'تعذر الحذف. حاول مرة أخرى.'; try { const data = await res.json(); message = data?.message || message; } catch (e) {} window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', title: 'تعذر الحذف', message: message } })); return; } let deletedPath = ''; try { deletedPath = new URL(actionUrl, window.location.origin).pathname; } catch (e) {} const currentPath = window.location.pathname || ''; const isOpen = deletedPath !== '' && (currentPath === deletedPath || currentPath.startsWith(deletedPath + '/')); open = false; if (window.Livewire) window.Livewire.dispatch('conversations-changed'); window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', title: 'تم حذف المحادثة', message: 'تم حذف المحادثة نهائياً.' } })); if (isOpen && window.Livewire && window.Livewire.navigate) window.Livewire.navigate(createUrl); } catch (e) { window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', title: 'تعذر الحذف', message: 'تعذر الاتصال بالخادم.' } })); } finally { busy = false; } })()" class="contents">
                     @csrf @method('DELETE')
                     <button type="submit" :disabled="busy"
                         class="px-4 py-1.5 rounded-full bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5 min-h-[32px]">
@@ -182,5 +164,7 @@
             </x-slot:confirm>
         </x-ui.confirm-modal>
         <x-sidebar.sidebar-rename-modal id="sidebar-rename" />
+
     @endif
+
 </div>

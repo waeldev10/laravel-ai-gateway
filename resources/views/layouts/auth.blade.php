@@ -31,10 +31,14 @@
             <p class="mt-6 text-center text-xs text-zinc-500 dark:text-zinc-400">مساحة دردشة نظيفة — نفس هوية التطبيق في الوضع الفاتح والداكن.</p>
             <div class="mt-4 flex justify-center">
                 <x-theme.theme-toggle />
+      
             </div>
         </div>
+          
     </main>
+  
     @livewireScripts
+
 </body>
 
 </html>

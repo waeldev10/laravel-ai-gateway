@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\LoginForm;
-use App\Livewire\RegisterForm;
+use App\Livewire\Auth\LoginForm;
+use App\Livewire\Auth\RegisterForm;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -14,7 +14,7 @@ describe('livewire login', function () {
         $this->get(route('login'))
             ->assertOk()
             ->assertSee('تسجيل الدخول')
-            ->assertSeeLivewire('login-form')
+            ->assertSeeLivewire('auth.login-form')
             ->assertSee('تذكرني', false);
     });
 
@@ -82,7 +82,7 @@ describe('livewire register', function () {
         $this->get(route('register'))
             ->assertOk()
             ->assertSee('إنشاء حساب')
-            ->assertSeeLivewire('register-form');
+            ->assertSeeLivewire('auth.register-form');
     });
 
     test('valid registration authenticates and navigates to new chat without reload', function () {

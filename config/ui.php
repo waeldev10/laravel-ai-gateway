@@ -10,10 +10,12 @@ return [
     | defaults preserve the existing black/white identity per color scheme:
     | light uses dark-on-light values, dark uses light-on-dark values.
     |
-    | A saved user customization is a single #RRGGBB value per token that
-    | applies to both schemes (see UiColorService). When no customization
-    | exists, the scheme-specific defaults below are used, so the current
-    | light/dark appearance is unchanged.
+    | Customizations are browser-local (localStorage key `ui_colors`, one
+    | strict #RRGGBB value per token, validated before use) and apply to
+    | both schemes, exactly like the light/dark theme preference. When no
+    | customization exists, the scheme-specific defaults below are used, so
+    | the current light/dark appearance is unchanged. Laravel never stores
+    | or reads custom palettes: no database column, no cookies, no requests.
     |
     */
 

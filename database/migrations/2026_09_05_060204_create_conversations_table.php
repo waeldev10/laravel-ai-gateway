@@ -17,6 +17,7 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
             $table->string('title');
+            $table->timestamp('pinned_at')->nullable();
             $table->timestamps();
         });
     }

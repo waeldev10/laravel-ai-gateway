@@ -10,6 +10,6 @@
                 class="shrink-0 rounded-full ui-primary-btn px-5 py-2 text-sm font-medium">＋
                 محادثة جديدة</a>
         </div>
-        @livewire('conversation-search')
+        @livewire('conversation.conversation-search')
     </div>
 @endsection

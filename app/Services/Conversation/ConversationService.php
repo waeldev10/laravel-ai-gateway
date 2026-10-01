@@ -15,6 +15,16 @@ use Illuminate\Support\Facades\Gate;
 class ConversationService
 {
     /**
+     * Sidebar bounds: the sidebar only needs what it can display. Pinned
+     * conversations are kept in full (up to their cap) so pinning never hides
+     * an entry; recent ones are capped because the dedicated search page owns
+     * full-history browsing.
+     */
+    public const SIDEBAR_PINNED_LIMIT = 50;
+
+    public const SIDEBAR_RECENT_LIMIT = 10;
+
+    /**
      * Get the authenticated user's conversations, newest first.
      *
      * When a search term is given, only conversations whose title matches
@@ -23,6 +33,72 @@ class ConversationService
     public function listFor(User $user, ?string $search = null): Collection
     {
         return $this->baseQueryFor($user, $search)->get();
+    }
+
+    /**
+     * Bounded sidebar groups: pinned (up to SIDEBAR_PINNED_LIMIT) plus recent
+     * (up to SIDEBAR_RECENT_LIMIT), each from its own limited query so the
+     * sidebar never loads the whole conversation history on any render.
+     *
+     * The open conversation ($activeId) is always included even when it falls
+     * outside the recent window, so highlighting never loses the current page.
+     * Such an overflow entry is appended at the end of its own group, keeping
+     * the ordering of everything else untouched and deterministic.
+     *
+     * Ordering rule (identical to baseQueryFor, applied per group): pinned
+     * first by pinned_at desc, then newest first by created_at desc, id desc
+     * as the final tie-break. Renames, message sends and edits never move a
+     * conversation: only creation (newest top), pin (into/out of the pinned
+     * group by pinned_at) and delete change positions.
+     *
+     * @return array{pinned: Collection<int, Conversation>, recent: Collection<int, Conversation>, hasMore: bool}
+     */
+    public function sidebarFor(User $user, ?string $search = null, ?string $activeId = null): array
+    {
+        $pinnedLimit = self::SIDEBAR_PINNED_LIMIT;
+        $recentLimit = self::SIDEBAR_RECENT_LIMIT;
+
+        $pinned = $user->conversations()
+            ->whereNotNull('pinned_at')
+            ->when(filled($search), function ($query) use ($search) {
+                $query->where('title', 'like', '%'.addcslashes($search, '\\%_').'%');
+            })
+            ->orderByDesc('pinned_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($pinnedLimit + 1)
+            ->get();
+
+        $recent = $user->conversations()
+            ->whereNull('pinned_at')
+            ->when(filled($search), function ($query) use ($search) {
+                $query->where('title', 'like', '%'.addcslashes($search, '\\%_').'%');
+            })
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($recentLimit + 1)
+            ->get();
+
+        $hasMore = $pinned->count() > $pinnedLimit || $recent->count() > $recentLimit;
+        $pinned = $pinned->take($pinnedLimit)->values();
+        $recent = $recent->take($recentLimit)->values();
+
+        if (filled($activeId)
+            && ! $pinned->contains('id', $activeId)
+            && ! $recent->contains('id', $activeId)
+        ) {
+            $active = $user->conversations()->find($activeId);
+
+            if ($active !== null && ($search === null || $search === '' || mb_stripos($active->title, $search) !== false)) {
+                if ($active->pinned_at !== null) {
+                    $pinned->push($active);
+                } else {
+                    $recent->push($active);
+                }
+            }
+        }
+
+        return ['pinned' => $pinned, 'recent' => $recent, 'hasMore' => $hasMore];
     }
 
     /**
@@ -37,7 +113,9 @@ class ConversationService
 
     /**
      * Shared retrieval behind listFor() and searchPaginated(): ownership scope,
-     * optional title filter, pinned-first then newest ordering.
+     * optional title filter, pinned-first then newest ordering. Ordering is
+     * explicit (pinned_at, then created_at, then id) so positions stay
+     * deterministic no matter which action triggered the re-fetch.
      */
     private function baseQueryFor(User $user, ?string $search): HasMany
     {
@@ -46,7 +124,7 @@ class ConversationService
                 $query->where('title', 'like', '%'.addcslashes($search, '\\%_').'%');
             })
             ->orderByDesc('pinned_at')
-            ->latest()
+            ->orderByDesc('created_at')
             ->orderByDesc('id');
     }
 
@@ -81,6 +159,11 @@ class ConversationService
 
     /**
      * Rename a conversation after verifying the user owns it.
+     *
+     * No refresh query: update() already leaves the new title (and the
+     * touched updated_at) on the in-memory model, so callers that already
+     * hold it pay zero extra queries. Renaming never changes created_at or
+     * pinned_at, so the conversation keeps its position.
      */
     public function renameFor(User $user, Conversation $conversation, string $title): Conversation
     {
@@ -88,11 +171,16 @@ class ConversationService
 
         $conversation->update(['title' => $title]);
 
-        return $conversation->refresh();
+        return $conversation;
     }
 
     /**
      * Pin or unpin a conversation after verifying the user owns it.
+     *
+     * No refresh query, same reasoning as renameFor(): the new pinned_at
+     * value is already on the model. Pinning moves the conversation between
+     * the pinned/recent groups (ordered by pinned_at desc); unpinning returns
+     * it to the recent group at its created_at position.
      */
     public function setPinnedFor(User $user, Conversation $conversation, bool $pinned): Conversation
     {
@@ -100,7 +188,19 @@ class ConversationService
 
         $conversation->update(['pinned_at' => $pinned ? now() : null]);
 
-        return $conversation->refresh();
+        return $conversation;
+    }
+
+    /**
+     * Toggle a conversation's pin state by id: the single authoritative pin
+     * path shared by the sidebar, the search page and the conversation menu,
+     * so the find + authorize + update sequence lives in exactly one place.
+     */
+    public function togglePinFor(User $user, string $id): Conversation
+    {
+        $conversation = $this->findFor($user, $id);
+
+        return $this->setPinnedFor($user, $conversation, $conversation->pinned_at === null);
     }
 
     /**
@@ -136,7 +236,7 @@ class ConversationService
                 'content' => $content,
             ]);
 
-            return $conversation->refresh();
+            return $conversation;
         });
     }
 

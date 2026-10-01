@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\MessageComposer;
+use App\Livewire\Chat\MessageComposer;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -11,7 +11,7 @@ uses(RefreshDatabase::class);
 
 describe('new chat send button empty state', function () {
     test('send button is disabled while the input is empty and enables with content', function () {
-        $source = file_get_contents(resource_path('views/livewire/message-composer.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
 
         // Browser-only UI state: Alpine disables on empty/whitespace, enables otherwise.
         expect($source)->toContain(':disabled="!text.trim()"')
@@ -22,7 +22,7 @@ describe('new chat send button empty state', function () {
     });
 
     test('typing never sends a Livewire request', function () {
-        $source = file_get_contents(resource_path('views/livewire/message-composer.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
 
         // Plain entanglement is deferred by default: typing syncs locally,
         // only submit talks to the server. Neither `.live` (a request per
@@ -69,7 +69,7 @@ describe('new chat send button empty state', function () {
     });
 
     test('new chat page keeps the real loading state and no fake loading', function () {
-        $source = file_get_contents(resource_path('views/livewire/message-composer.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
 
         expect($source)->toContain('wire:loading.attr="disabled"')
             ->and($source)->toContain('wire:loading')

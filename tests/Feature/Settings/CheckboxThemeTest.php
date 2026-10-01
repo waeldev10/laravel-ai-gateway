@@ -1,10 +1,8 @@
 <?php
 
-use App\Livewire\UiColorSettings;
 use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -12,9 +10,8 @@ function checkboxTags(): array
 {
     $files = [
         resource_path('views/components/conversation/conversation-nav.blade.php'),
-        resource_path('views/conversations/index.blade.php'),
-        resource_path('views/livewire/conversation-search.blade.php'),
-        resource_path('views/livewire/login-form.blade.php'),
+        resource_path('views/livewire/Conversation/conversation-search.blade.php'),
+        resource_path('views/livewire/Auth/login-form.blade.php'),
     ];
 
     $tags = [];
@@ -45,8 +42,8 @@ describe('checkbox theme token', function () {
     test('every application checkbox carries the shared token class', function () {
         $tags = checkboxTags();
 
-        // Conversation rows, both Select All boxes, and login remember-me.
-        expect($tags)->toHaveCount(5);
+        // Conversation rows, the search Select All box, and login remember-me.
+        expect($tags)->toHaveCount(3);
 
         foreach ($tags as $tag) {
             expect($tag)->toContain('ui-checkbox');
@@ -78,31 +75,25 @@ describe('checkbox behavior is unchanged', function () {
             }
         }
 
-        $search = file_get_contents(resource_path('views/livewire/conversation-search.blade.php'));
+        $search = file_get_contents(resource_path('views/livewire/Conversation/conversation-search.blade.php'));
         $nav = file_get_contents(resource_path('views/components/conversation/conversation-nav.blade.php'));
 
         expect($search)->toContain('allChecked')
             ->and($nav)->toContain('x-model="selected"');
     });
 
-    test('a persisted primary color reaches the variable checkboxes read', function () {
+    test('the checkbox variable falls back to config defaults and stored colors apply client-side', function () {
         $user = User::factory()->create();
         Conversation::factory()->create(['user_id' => $user->id]);
-        $this->actingAs($user);
+        $html = $this->actingAs($user)->get(route('conversations.search'))->assertOk()->getContent();
 
-        Livewire::test(UiColorSettings::class)
-            ->call('save', [
-                'primary' => '#B91C1C',
-                'primary_text' => '#FFFFFF',
-                'accent' => '#B91C1C',
-                'link' => '#B91C1C',
-            ])
-            ->assertDispatched('toast', type: 'success');
+        $light = array_map(fn ($v) => strtoupper((string) $v), (array) config('ui.colors.defaults.light', []));
 
-        // The same server-rendered variable drives .ui-checkbox after refresh.
-        $html = $this->get(route('conversations.index'))->assertOk()->getContent();
-
-        expect($html)->toContain('--color-primary:#B91C1C')
+        // The server renders scheme defaults only; a saved browser palette
+        // overrides the same variable client-side before first paint.
+        expect($html)->toContain('--color-primary:'.$light['primary'])
+            ->and($html)->toContain('window.__uiColors')
+            ->and($html)->toContain('localStorage.getItem(KEY)')
             ->and($html)->toContain('ui-checkbox');
     });
 });

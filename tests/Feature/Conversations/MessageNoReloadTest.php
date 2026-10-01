@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\ConversationMessages;
-use App\Livewire\MessageComposer;
+use App\Livewire\Chat\ConversationMessages;
+use App\Livewire\Chat\MessageComposer;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -67,8 +67,8 @@ describe('sending a message in an existing conversation', function () {
     });
 
     test('the composer carries no redirect or location-changing behavior', function () {
-        $component = file_get_contents(app_path('Livewire/MessageComposer.php'));
-        $view = file_get_contents(resource_path('views/livewire/message-composer.blade.php'));
+        $component = file_get_contents(app_path('Livewire/Chat/MessageComposer.php'));
+        $view = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
 
         expect($component)->not()->toContain('redirectRoute')
             ->and($component)->not()->toContain('location.')

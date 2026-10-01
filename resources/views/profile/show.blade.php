@@ -6,6 +6,6 @@
     <div class="max-w-xl mx-auto px-4 py-8 w-full">
         <h1 class="text-xl font-semibold mb-4">الملف الشخصي</h1>
 
-        @livewire('profile-form')
+        @livewire('profile.profile-form')
     </div>
 @endsection

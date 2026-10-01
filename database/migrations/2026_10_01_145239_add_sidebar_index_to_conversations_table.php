@@ -7,12 +7,14 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Cover the sidebar/search ordering: ownership scope plus the
+     * pinned-first, newest-first sort, so bounded per-group queries and the
+     * paginated search never need a filesort over the whole history.
      */
     public function up(): void
     {
         Schema::table('conversations', function (Blueprint $table) {
-            $table->timestamp('pinned_at')->nullable()->after('title');
+            $table->index(['user_id', 'pinned_at', 'created_at'], 'conversations_sidebar_idx');
         });
     }
 
@@ -22,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('conversations', function (Blueprint $table) {
-            $table->dropColumn('pinned_at');
+            $table->dropIndex('conversations_sidebar_idx');
         });
     }
 };

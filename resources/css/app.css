@@ -13,6 +13,7 @@
         src: url('../../public/assets/fonts/Tajawal/Tajawal-Regular.woff2') format('woff2');
         font-weight: 400;
         font-style: normal;
+        font-display: swap;
     }
     
   
@@ -21,33 +22,38 @@
         src: url('../../public/assets/fonts/Tajawal/Tajawal-Bold.woff2') format('woff2');
         font-weight: 700;
         font-style: normal;
+        font-display: swap;
     }
 
-    @font-face {
+    /* @font-face {
         font-family: 'Tajawal';
         src: url('../../public/assets/fonts/Tajawal/Tajawal-ExtraBold.woff2') format('woff2');
         font-weight: 800;
         font-style: normal;
-    }
+        font-display: swap;
+    } */
     
 
-    @font-face {
+    /* @font-face {
         font-family: 'Tajawal';
         src: url('../../public/assets/fonts/Tajawal/Tajawal-Light.woff2') format('woff2');
         font-weight: 300;
         font-style: normal;
-    }
+        font-display: swap;
+    } */
 
 @theme {
-      --font-sans: "Tajawal", sans-serif;
+    --font-sans: "Tajawal", sans-serif;
     --font-heading: "Tajawal", sans-serif;
     --font-sans: 'Tajawal', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 /* Semantic UI color tokens.
-   Values are injected server-side by `components/ui-colors.blade.php`
-   (saved customization or config/ui.php defaults, strict #RRGGBB only).
+   Values are rendered from `config/ui.php` defaults by
+   `components/theme/ui-colors.blade.php` (`:root` = light, `.dark` = dark);
+   a browser-local `localStorage.ui_colors` palette (strict #RRGGBB only,
+   validated before use) overrides them via an inline `<html>` style.
    These classes are the only place that maps tokens to UI roles, so a
    customization propagates consistently without replacing every Tailwind
    color class. Hover uses opacity (visible for any custom color);
@@ -113,7 +119,8 @@
 /* Checkboxes follow the primary token via the native `accent-color`
    mechanism: no extra state, no requests, no hardcoded fill color.
    Checked fill + checkmark track `--color-primary` live (Settings preview
-   updates the variable in place; refreshes re-render it server-side), while
+   updates the variable in place; a saved palette is re-applied from
+   localStorage on every load), while
    unchecked borders/backgrounds keep their existing theme classes. The
    browser picks the checkmark contrast automatically, and focus stays
    visible in both schemes through the same token. */

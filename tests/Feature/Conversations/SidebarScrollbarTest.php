@@ -1,7 +1,7 @@
 <?php
 
-use App\Livewire\ConversationSearch;
-use App\Livewire\SidebarConversations;
+use App\Livewire\Conversation\ConversationSearch;
+use App\Livewire\Sidebar\SidebarConversations;
 use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

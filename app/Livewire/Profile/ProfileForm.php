@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Profile;
 
 use App\Services\Auth\PasswordService;
 use App\Services\Profile\ProfileService;
@@ -86,6 +86,6 @@ class ProfileForm extends Component
 
     public function render()
     {
-        return view('livewire.profile-form');
+        return view('livewire.profile.profile-form');
     }
 }
