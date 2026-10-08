@@ -1,20 +1,31 @@
 <?php
 
+use App\Enums\MessageRole;
 use App\Livewire\Chat\ConversationMessages;
 use App\Livewire\Chat\MessageComposer;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
 describe('sending a message in an existing conversation', function () {
-    test('sending persists exactly once with no redirect and no reload', function () {
+    test('sending persists the user message and the assistant reply with no redirect and no reload', function () {
         $user = User::factory()->create();
         $conversation = Conversation::factory()->create(['user_id' => $user->id]);
         $this->actingAs($user);
+
+        config()->set('ai.provider', 'openai');
+        config()->set('ai.providers.openai.api_key', 'test-key');
+        config()->set('ai.providers.openai.model', 'gpt-4o-mini');
+        Http::fake([
+            'https://api.openai.com/*' => Http::response([
+                'choices' => [['message' => ['role' => 'assistant', 'content' => 'رد المساعد']]],
+            ], 200),
+        ]);
 
         $component = Livewire::test(MessageComposer::class, ['conversation' => $conversation])
             ->set('content', 'رسالة بدون تحديث للصفحة')
@@ -27,12 +38,15 @@ describe('sending a message in an existing conversation', function () {
         // No redirect effect: the page stays mounted, no browser reload.
         expect($component->effects['redirect'] ?? null)->toBeNull();
 
-        expect(Message::count())->toBe(1);
+        $messages = Message::orderBy('id')->get();
 
-        $message = Message::first();
+        expect($messages)->toHaveCount(2);
 
-        expect($message->content)->toBe('رسالة بدون تحديث للصفحة')
-            ->and($message->conversation_id)->toBe($conversation->id);
+        expect($messages[0]->content)->toBe('رسالة بدون تحديث للصفحة')
+            ->and($messages[0]->role)->toBe(MessageRole::User)
+            ->and($messages[0]->conversation_id)->toBe($conversation->id)
+            ->and($messages[1]->role)->toBe(MessageRole::Assistant)
+            ->and($messages[1]->content)->toBe('رد المساعد');
     });
 
     test('the message list refreshes from persisted state after message-sent', function () {

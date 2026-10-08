@@ -32,6 +32,23 @@ describe('auth layout theme toggle', function () {
 
         expect($source)->toContain('window.__setTheme')
             ->and($source)->toContain('localStorage.setItem')
-            ->and($source)->not()->toContain('setTimeout');
+            // Exactly one timer in the module, owned by the navigation
+            // loading visibility gate. The theme write path itself stays
+            // timer-free: no delayed repaints, no fake transitions.
+            ->and(substr_count($source, 'setTimeout'))->toBe(1)
+            ->and($source)->toContain('navLoadingTimer');
+    });
+
+    test('the theme class survives livewire navigation without a wrong-theme frame', function () {
+        $source = file_get_contents(resource_path('js/app.js'));
+
+        // Livewire navigate syncs <html> attributes from the
+        // server-rendered document (which never carries the client
+        // theme), stripping `dark`. The guard restores the expected
+        // class synchronously before the next paint: no timers, no
+        // masking, still one theme implementation.
+        expect($source)->toContain('MutationObserver')
+            ->and($source)->toContain("attributeFilter: ['class']")
+            ->and($source)->toContain('expectedDark');
     });
 });

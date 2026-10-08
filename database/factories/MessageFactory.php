@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\MessageRole;
+use App\Enums\MessageStatus;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,6 +24,7 @@ class MessageFactory extends Factory
             'conversation_id' => Conversation::factory(),
             'role' => fake()->randomElement([MessageRole::User, MessageRole::Assistant]),
             'content' => fake()->paragraph(),
+            'status' => MessageStatus::Complete,
         ];
     }
 }

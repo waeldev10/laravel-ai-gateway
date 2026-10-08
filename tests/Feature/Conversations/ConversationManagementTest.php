@@ -274,6 +274,28 @@ describe('conversation deletion', function () {
         expect(Conversation::find($conversation->id))->toBeNull();
     });
 
+    test('deleting the open conversation from the sidebar goes straight to a fresh chat', function () {
+        $source = file_get_contents(resource_path('views/components/conversation/conversation-nav.blade.php'));
+
+        $isOpenPos = strpos($source, 'if (isOpen)');
+        expect($isOpenPos)->not()->toBeFalse();
+
+        $elsePos = strpos($source, '} else {', $isOpenPos);
+        expect($elsePos)->not()->toBeFalse();
+
+        $openBranch = substr($source, $isOpenPos, $elsePos - $isOpenPos);
+        $otherBranch = substr($source, $elsePos);
+
+        // Open conversation: straight to a fresh chat, never a refresh of
+        // the dying page (which would re-request the deleted conversation).
+        expect($openBranch)->toContain('Livewire.navigate(createUrl)')
+            ->and($openBranch)->not()->toContain("dispatch('conversations-changed')");
+
+        // Any other conversation: refresh the sidebar in place and stay put.
+        expect($otherBranch)->toContain("dispatch('conversations-changed')")
+            ->and($otherBranch)->not()->toContain('Livewire.navigate');
+    });
+
     test('deleting a conversation deletes its messages through cascade', function () {
         $user = User::factory()->create();
         $conversation = Conversation::factory()->create(['user_id' => $user->id]);

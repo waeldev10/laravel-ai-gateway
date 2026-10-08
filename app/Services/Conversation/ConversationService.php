@@ -2,9 +2,11 @@
 
 namespace App\Services\Conversation;
 
+use App\Enums\AiSource;
 use App\Enums\MessageRole;
 use App\Models\Conversation;
 use App\Models\User;
+use App\Services\Audit\AuditLogService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +16,8 @@ use Illuminate\Support\Facades\Gate;
 
 class ConversationService
 {
+    public function __construct(private readonly AuditLogService $audit) {}
+
     /**
      * Sidebar bounds: the sidebar only needs what it can display. Pinned
      * conversations are kept in full (up to their cap) so pinning never hides
@@ -208,9 +212,20 @@ class ConversationService
      *
      * @param  array<string, mixed>  $attributes
      */
-    public function createFor(User $user, array $attributes): Conversation
+    public function createFor(User $user, array $attributes, AiSource $source = AiSource::Web): Conversation
     {
-        return $user->conversations()->create($attributes);
+        $conversation = $user->conversations()->create($attributes);
+
+        $this->audit->record(
+            $user,
+            $source,
+            AuditLogService::CONVERSATION_CREATED,
+            'success',
+            ['title_length' => mb_strlen((string) $conversation->title)],
+            $conversation
+        );
+
+        return $conversation;
     }
 
     /**
@@ -222,9 +237,9 @@ class ConversationService
      * does. Ownership/authorization mirrors MessageService::createUserMessage
      * (the conversation always belongs to the acting user).
      */
-    public function startFor(User $user, string $content): Conversation
+    public function startFor(User $user, string $content, AiSource $source = AiSource::Web): Conversation
     {
-        return DB::transaction(function () use ($user, $content) {
+        $conversation = DB::transaction(function () use ($user, $content) {
             $conversation = $user->conversations()->create([
                 'title' => $this->titleFor($content),
             ]);
@@ -238,6 +253,17 @@ class ConversationService
 
             return $conversation;
         });
+
+        $this->audit->record(
+            $user,
+            $source,
+            AuditLogService::CONVERSATION_CREATED,
+            'success',
+            ['title_length' => mb_strlen((string) $conversation->title)],
+            $conversation
+        );
+
+        return $conversation;
     }
 
     /**

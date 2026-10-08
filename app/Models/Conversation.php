@@ -34,4 +34,9 @@ class Conversation extends Model
     {
         return $this->hasMany(Message::class);
     }
+
+    public function aiRequests(): HasMany
+    {
+        return $this->hasMany(AiRequest::class);
+    }
 }

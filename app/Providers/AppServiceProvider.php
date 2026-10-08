@@ -34,5 +34,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('register', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());
         });
+
+        // HTTP-level guard for the expensive AI streaming endpoints, keyed
+        // by user (or IP for safety). Separate from the application-level
+        // generation budget enforced inside MessageService and from any
+        // upstream provider rate limits.
+        RateLimiter::for('ai-stream', function (Request $request) {
+            $key = $request->user()?->getKey() ?? $request->ip();
+
+            return Limit::perMinute(20)->by('ai-stream:'.$key);
+        });
     }
 }

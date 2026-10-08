@@ -38,21 +38,36 @@ describe('message edit and copy buttons', function () {
     });
 
     test('copy is fully client-side with per-message checkmark feedback', function () {
-        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
+        // Per-message markup lives in the shared message-item partial
+        // (rendered by the initial paint and the history endpoint alike);
+        // the copy implementation lives in the Alpine scopes around it.
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-item.blade.php'));
+        $parent = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
+        $history = file_get_contents(resource_path('js/chat-history.js'));
 
-        expect($source)->toContain('navigator.clipboard.writeText')
-            // The single Livewire call in this view is the edit save.
-            ->and(substr_count($source, '$wire.'))->toBe(1)
-            ->and($source)->toContain('$wire.updateMessage')
+        expect($source)->toContain('@click="copyMsg($el)"')
+            // The single Livewire call for message items is the edit save,
+            // owned by the list scope (the history scope delegates to the
+            // same component action through Livewire.find).
+            ->and(substr_count($parent, '$wire.'))->toBe(1)
+            ->and($parent)->toContain('$wire.updateMessage')
             // Success swaps only the copied message icon, then reverts back.
             ->and($source)->toContain('copiedId')
-            ->and($source)->toContain('setTimeout')
             ->and($source)->toContain("x-text=\"copiedId === '")
-            ->and($source)->toContain('تم النسخ');
+            ->and($source)->toContain('تم النسخ')
+            // Copy itself never touches the server: clipboard + revert
+            // timer in both Alpine scopes the partial can run in.
+            ->and($parent)->toContain('navigator.clipboard.writeText')
+            ->and($parent)->toContain('setTimeout')
+            ->and($history)->toContain('navigator.clipboard.writeText')
+            ->and($history)->toContain('setTimeout')
+            // The parent list renders items only through the partial: one
+            // source of truth, no duplicated markup.
+            ->and(substr_count($parent, "@include('livewire.chat.message-item'"))->toBe(1);
     });
 
     test('inline editor is a tall single-line input, not a textarea', function () {
-        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-item.blade.php'));
 
         expect($source)->toContain('data-edit-input')
             ->and($source)->toContain('<input type="text"')
@@ -62,7 +77,7 @@ describe('message edit and copy buttons', function () {
     });
 
     test('editor spans the message width while the bubble keeps its size', function () {
-        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-item.blade.php'));
 
         // Wide editor column with the bubble capped to its previous size,
         // so long bubbles render exactly as before.
@@ -71,7 +86,7 @@ describe('message edit and copy buttons', function () {
     });
 
     test('edit mode fully replaces the bubble and actions in place', function () {
-        $source = file_get_contents(resource_path('views/livewire/Chat/conversation-messages.blade.php'));
+        $source = file_get_contents(resource_path('views/livewire/Chat/message-item.blade.php'));
 
         // Both the message bubble and its action row hide while editing, so
         // no original text stays visible above, beside, or behind the input.

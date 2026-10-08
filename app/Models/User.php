@@ -24,6 +24,26 @@ class User extends Authenticatable
         return $this->hasMany(Conversation::class);
     }
 
+    public function aiRequests(): HasMany
+    {
+        return $this->hasMany(AiRequest::class);
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function aiPersonas(): HasMany
+    {
+        return $this->hasMany(AiPersona::class);
+    }
+
+    public function aiMemories(): HasMany
+    {
+        return $this->hasMany(AiMemory::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *

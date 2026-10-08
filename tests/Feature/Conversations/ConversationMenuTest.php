@@ -78,6 +78,20 @@ describe('conversation page action menu', function () {
         expect(Conversation::find($conversation->id))->toBeNull();
     });
 
+    test('delete navigates straight away without updating the dying page', function () {
+        $user = User::factory()->create();
+        $conversation = Conversation::factory()->create(['user_id' => $user->id]);
+        $this->actingAs($user);
+
+        // The show page is being left: dispatching `conversations-changed`
+        // first would race the navigation and could re-request the deleted
+        // conversation (404). The destination renders a fresh sidebar.
+        Livewire::test(ConversationMenu::class, ['conversationId' => (string) $conversation->id])
+            ->call('delete')
+            ->assertRedirect(route('conversations.create'))
+            ->assertNotDispatched('conversations-changed');
+    });
+
     test('users cannot act on another users conversation', function () {
         $user = User::factory()->create();
         $other = User::factory()->create();

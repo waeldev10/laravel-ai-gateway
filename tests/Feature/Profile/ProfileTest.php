@@ -271,6 +271,10 @@ describe('theme persistence infrastructure', function () {
             ->and($source)->toContain('prefers-color-scheme')
             ->and($source)->toContain("addEventListener('change'")
             ->and($source)->toContain("addEventListener('storage'")
-            ->and($source)->not()->toContain('setTimeout');
+            // Exactly one timer in the module, owned by the navigation
+            // loading visibility gate. Theme apply/navigate/system/cross-tab
+            // sync paths themselves stay timer-free.
+            ->and(substr_count($source, 'setTimeout'))->toBe(1)
+            ->and($source)->toContain('navLoadingTimer');
     });
 });

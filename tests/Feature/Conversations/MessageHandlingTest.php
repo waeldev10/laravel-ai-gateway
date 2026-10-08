@@ -5,6 +5,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -94,6 +95,15 @@ describe('message creation', function () {
     test('users can send a message to their own conversation', function () {
         $user = User::factory()->create();
         $conversation = Conversation::factory()->create(['user_id' => $user->id]);
+
+        config()->set('ai.provider', 'openai');
+        config()->set('ai.providers.openai.api_key', 'test-key');
+        config()->set('ai.providers.openai.model', 'gpt-4o-mini');
+        Http::fake([
+            'https://api.openai.com/*' => Http::response([
+                'choices' => [['message' => ['role' => 'assistant', 'content' => 'رد المساعد']]],
+            ], 200),
+        ]);
 
         $this->actingAs($user)
             ->post(route('conversations.messages.store', $conversation), [

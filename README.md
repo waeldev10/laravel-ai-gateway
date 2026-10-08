@@ -56,14 +56,40 @@ Update the username and password according to your local MySQL configuration.
 php artisan migrate
 7. Configure AI providers
 
-Add the API keys for the AI providers you want to use to your .env file.
+Add the API keys and model names for the AI providers you want to use to your .env file.
+
+You must obtain these yourself: create an account with the provider, add billing/credits if required, create an API key, and pick a model name. This application cannot create provider accounts or retrieve private API keys.
+
+AI_PROVIDER=openai
 
 OPENAI_API_KEY=
+OPENAI_MODEL=
+
 GEMINI_API_KEY=
+GEMINI_MODEL=
+
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=
+
+OPENCODE_API_KEY=
+OPENCODE_MODEL=
+
+GLM_API_KEY=
+GLM_MODEL=
+
+Supported providers and where their credentials come from:
+
+- OpenAI — key and model from https://platform.openai.com (model, e.g. a `gpt-*` chat model).
+- Gemini — key from Google AI Studio, model, e.g. `gemini-2.0-flash`.
+- OpenRouter — key from https://openrouter.ai, model with organization prefix, e.g. `openai/gpt-4o-mini`.
+- OpenCode — Zen service key from the OpenCode Console; uses the hosted Zen inference gateway (`opencode.ai/zen`), not a local server. Zen serves different models over different protocols, so set `OPENCODE_PROTOCOL` explicitly (`responses` for models like `muse-spark-1.3-contributor-free`, `chat_completions` for Zen-served chat models).
+- GLM — key from the Z.AI open platform (https://z.ai), model, e.g. `glm-5`.
+
+Select the active provider with `AI_PROVIDER` (`openai`, `gemini`, `openrouter`, `opencode`, or `glm`) and its model with the matching `<PROVIDER>_MODEL` variable. Timeouts, base URLs, retry behavior, and the per-minute application rate limit are configurable in `config/ai.php`.
 
 Never commit API keys or other sensitive credentials to Git.
 
-AI provider configuration will be updated as provider integrations are implemented.
+To test without real credentials, the Pest suite fakes every provider HTTP call (`Http::fake()`); no test ever reaches a real provider API.
 
 8. Install and build frontend assets
 
@@ -124,15 +150,18 @@ WhatsApp
        │
        ▼
 Laravel AI Hub
-       │
-       ▼
-   AI Gateway
-       │
-   ┌───┴───┐
-   ▼       ▼
-OpenAI   Gemini
+        │
+        ▼
+    AI Gateway
+ (app/AI: AiService → AiProviderResolver → AiProvider)
+        │
+    ┌───┴───┬──────────┬──────────┬─────┐
+    ▼       ▼          ▼          ▼     ▼
+ OpenAI   Gemini   OpenRouter OpenCode GLM
 
 The goal is to keep AI-related logic centralized instead of implementing separate AI integrations in every client.
+
+Application code depends on the `AiProvider` contract, never on concrete providers. Each provider selects an explicit protocol (`AiProtocol`: Chat Completions, Responses, or Gemini generateContent) from configuration — one provider may serve different models over different protocols. Provider-specific HTTP, payloads, and error mapping live inside each protocol/provider under `app/AI/Protocols/` and `app/AI/Providers/`, with shared timeout/retry/error infrastructure in a common base. Message persistence and authorization stay in `MessageService`, which only coordinates the workflow.
 
 Project Structure
 laravel-ai-gateway/

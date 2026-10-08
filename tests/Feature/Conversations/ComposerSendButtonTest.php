@@ -12,26 +12,25 @@ uses(RefreshDatabase::class);
 describe('new chat send button empty state', function () {
     test('send button is disabled while the input is empty and enables with content', function () {
         $source = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
+        $script = file_get_contents(resource_path('js/chat-stream.js'));
 
-        // Browser-only UI state: Alpine disables on empty/whitespace, enables otherwise.
-        expect($source)->toContain(':disabled="!text.trim()"')
+        // Browser-only UI state: the button starts disabled and plain JS
+        // enables it on non-blank input (streaming submit, no Livewire).
+        expect($source)->toContain('data-send-btn')
             ->and($source)->toContain('disabled:cursor-not-allowed')
             ->and($source)->toContain('disabled:opacity-40')
-            // Keyboard submit is guarded the same way.
-            ->and($source)->toContain('if(text.trim())');
+            ->and($script)->toContain('trim()');
     });
 
     test('typing never sends a Livewire request', function () {
         $source = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
 
-        // Plain entanglement is deferred by default: typing syncs locally,
-        // only submit talks to the server. Neither `.live` (a request per
-        // keystroke) nor `.defer` (not a valid entangle modifier: it
-        // evaluates to `undefined` and silently destroys the two-way sync,
-        // leaving Livewire validating a stale empty `content`) may be used.
-        expect($source)->toContain("@entangle('content')")
-            ->and($source)->not()->toContain("@entangle('content').live")
-            ->and($source)->not()->toContain("@entangle('content').defer")
+        // The composer submits through fetch to the SSE streaming endpoint:
+        // no wire:submit, no $wire call, no entangle, no wire:model — so
+        // typing cannot trigger any Livewire request at all.
+        expect($source)->not()->toContain('wire:submit')
+            ->and($source)->not()->toContain('$wire')
+            ->and($source)->not()->toContain('@entangle')
             ->and($source)->not()->toContain('wire:model');
     });
 
@@ -71,8 +70,11 @@ describe('new chat send button empty state', function () {
     test('new chat page keeps the real loading state and no fake loading', function () {
         $source = file_get_contents(resource_path('views/livewire/Chat/message-composer.blade.php'));
 
-        expect($source)->toContain('wire:loading.attr="disabled"')
-            ->and($source)->toContain('wire:loading')
+        // The real streaming state is a stop button shown while deltas
+        // arrive (AbortController cancels the fetch) — never a Livewire
+        // loading hook and never a timer-based fake animation.
+        expect($source)->toContain('data-stop-btn')
+            ->and($source)->toContain('data-composer-form')
             ->and($source)->not()->toContain('setTimeout');
     });
 });

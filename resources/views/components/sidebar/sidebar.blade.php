@@ -66,13 +66,24 @@
             </a>
 
             <div :class="sidebarOpen ? '' : 'lg:hidden'" class="mt-1 flex-1 min-h-0 flex flex-col overflow-x-hidden">
-                {{-- Lazy: the page shell (header, content) paints first and this
-                     hydrates afterwards in isolation, so a large history never
-                     blocks first paint. Mount params carry the route/query
+                {{-- Lazy on full page loads only: the page shell (header,
+                     content) paints first and this hydrates afterwards in
+                     isolation, so a large history never blocks first paint.
+                     Livewire SPA navigations (X-Livewire-Navigate fetches)
+                     render the list synchronously instead: the swapped body
+                     then already contains the real list, so no skeleton
+                     phase and no second hydration request ever flashes the
+                     sidebar on navigation. Mount params carry the route/query
                      context because lazy hydration runs without it. --}}
-                <livewire:sidebar.sidebar-conversations lazy
-                    :active-id="request()->route('conversation')?->id"
-                    :search-filter="is_string(request()->query('search')) ? request()->query('search') : null" />
+                @if(request()->header('X-Livewire-Navigate'))
+                    <livewire:sidebar.sidebar-conversations
+                        :active-id="request()->route('conversation')?->id"
+                        :search-filter="is_string(request()->query('search')) ? request()->query('search') : null" />
+                @else
+                    <livewire:sidebar.sidebar-conversations lazy
+                        :active-id="request()->route('conversation')?->id"
+                        :search-filter="is_string(request()->query('search')) ? request()->query('search') : null" />
+                @endif
             </div>
 
         @endauth

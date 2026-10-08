@@ -57,14 +57,21 @@ class ConversationMessages extends Component
 
         $service->updateUserMessage(Auth::user(), $message, $content);
 
-        $this->dispatch('close-edit-message');
+        // The edited user message id travels with the event so the browser
+        // can regenerate its assistant reply through the streaming endpoint
+        // (fetch, never a Livewire AI request) using the edited content.
+        $this->dispatch('close-edit-message', messageId: (string) $message->getKey());
         $this->dispatch('toast', type: 'success', title: 'تم التعديل', message: 'تم حفظ التعديلات بنجاح.');
     }
 
     public function render(MessageService $messages)
     {
+        // Initial paint (and every `message-sent` refresh) renders only the
+        // latest history page: at most HISTORY_PAGE_SIZE messages. Older
+        // history is owned by the browser (chat-history.js) and fetched
+        // through MessageController@index — never through a Livewire action.
         return view('livewire.chat.conversation-messages', [
-            'messages' => $messages->listFor(Auth::user(), $this->conversation),
+            'messages' => $messages->latestPageFor(Auth::user(), $this->conversation)['messages'],
         ]);
     }
 }

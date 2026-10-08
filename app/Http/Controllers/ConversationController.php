@@ -41,9 +41,17 @@ class ConversationController extends Controller
     {
         $conversation = $this->conversations->showFor($request->user(), $conversation);
 
+        // Initial paint loads only the latest history page (at most
+        // HISTORY_PAGE_SIZE messages): the full history is never loaded
+        // here. Older pages are fetched on demand through
+        // MessageController@index as the user scrolls up.
+        $page = $this->messages->latestPageFor($request->user(), $conversation);
+
         return view('conversations.show', [
             'conversation' => $conversation,
-            'messages' => $this->messages->listFor($request->user(), $conversation),
+            'messages' => $page['messages'],
+            'historyHasMore' => $page['hasMore'],
+            'historyOldestCursor' => $page['oldestCursor'],
         ]);
     }
 

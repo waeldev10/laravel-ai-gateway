@@ -83,8 +83,12 @@ class ConversationMenu extends Component
         $conversation = $service->findFor(Auth::user(), $this->conversationId);
         $service->deleteFor(Auth::user(), $conversation);
 
-        $this->dispatch('conversations-changed');
-
+        // No `conversations-changed` dispatch here on purpose: this page is
+        // being left (SPA navigate below), so no component update may run
+        // against the now-deleted conversation afterwards — that race
+        // re-requests the deleted conversation and surfaces a 404 before
+        // the navigation lands. The destination renders a fresh sidebar
+        // server-side, so no refresh is needed.
         session()->flash('toast', ['type' => 'success', 'title' => 'تم حذف المحادثة', 'message' => 'تم حذف المحادثة نهائياً.']);
         $this->redirect(route('conversations.create'), navigate: true);
     }

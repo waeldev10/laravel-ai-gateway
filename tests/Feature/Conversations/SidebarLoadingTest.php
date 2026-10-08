@@ -130,6 +130,41 @@ describe('sidebar bounded loading', function () {
         }
     });
 
+    test('fast navigations never flash the progress bar', function () {
+        $js = file_get_contents(resource_path('js/app.js'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        // Visibility gate only: armed at navigation start, lifted after
+        // ~250ms or immediately when navigation finishes — whichever is
+        // first. The framework bar itself is never disabled or replaced,
+        // and navigation timing is untouched.
+        expect($js)->toContain('nav-loading-pending')
+            ->and($js)->toContain("document.addEventListener('livewire:navigate'")
+            ->and($js)->toContain('disarmNavLoadingGate')
+            ->and($js)->not()->toContain('disableProgressBar')
+            ->and($css)->toContain('html.nav-loading-pending #nprogress');
+    });
+
+    test('livewire navigation fetches render the sidebar list synchronously without skeleton', function () {
+        $user = User::factory()->create();
+        $conversation = Conversation::factory()->create(['user_id' => $user->id, 'title' => 'Current chat']);
+        Conversation::factory()->create(['user_id' => $user->id, 'title' => 'Other chat']);
+
+        // A wire:navigate fetch carries X-Livewire-Navigate: the swapped
+        // body must already contain the real list — no skeleton phase and
+        // no second hydration request flashing the sidebar on navigation.
+        $html = $this->actingAs($user)
+            ->get(route('conversations.show', $conversation), ['X-Livewire-Navigate' => '1'])
+            ->assertOk()
+            ->getContent();
+
+        expect($html)->toContain('Current chat')
+            ->and($html)->toContain('Other chat')
+            ->and($html)->toContain('aria-current="page"')
+            ->and($html)->not()->toContain('__lazyLoad')
+            ->and($html)->not()->toContain('animate-pulse');
+    });
+
     test('placeholder is a lightweight skeleton without data', function () {
         $html = (new SidebarConversations)->placeholder();
 

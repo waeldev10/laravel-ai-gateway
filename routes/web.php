@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\AiUsageStatusController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\ChatStreamController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PromptController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -49,11 +52,35 @@ Route::middleware('auth')->group(function () {
         ->name('conversations.pin');
     Route::delete('conversations/{conversation}', [ConversationController::class, 'destroy'])
         ->name('conversations.destroy');
+    Route::get('conversations/{conversation}/messages', [MessageController::class, 'index'])
+        ->name('conversations.messages.index');
     Route::post('conversations/{conversation}/messages', [MessageController::class, 'store'])
         ->name('conversations.messages.store');
+    // Real-time AI generation: normal HTTP endpoint returning an SSE
+    // stream. The legacy redirect route above stays as the synchronous
+    // fallback; the browser uses these streaming routes (fetch +
+    // ReadableStream), never a Livewire action, for AI generation.
+    Route::post('conversations/stream', [ChatStreamController::class, 'storeNew'])
+        ->middleware('throttle:ai-stream')
+        ->name('conversations.stream');
+    Route::post('conversations/{conversation}/messages/stream', [ChatStreamController::class, 'store'])
+        ->middleware('throttle:ai-stream')
+        ->name('conversations.messages.stream');
+    Route::post('conversations/{conversation}/messages/continue', [ChatStreamController::class, 'continue'])
+        ->middleware('throttle:ai-stream')
+        ->name('conversations.messages.continue');
+    Route::post('conversations/{conversation}/messages/{message}/regenerate', [ChatStreamController::class, 'regenerate'])
+        ->middleware('throttle:ai-stream')
+        ->name('conversations.messages.regenerate');
 
     Route::get('profile', [ProfileController::class, 'show'])
         ->name('profile.show');
+
+    Route::get('ai/usage-status', AiUsageStatusController::class)
+        ->name('ai.usage-status');
+
+    Route::get('prompts', [PromptController::class, 'index'])
+        ->name('prompts.index');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
