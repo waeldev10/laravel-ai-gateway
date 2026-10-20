@@ -478,12 +478,14 @@ describe('performance verification', function () {
     });
 });
 
-describe('rest api untouched', function () {
-    test('no REST API was added or changed', function () {
+describe('versioned rest api coexists with web history', function () {
+    test('the /api/v1 surface exists and the web history path is unchanged', function () {
         $uris = collect(app('router')->getRoutes()->getRoutes())->map(fn ($route) => $route->uri())->all();
-        $apiRoutes = array_values(array_filter($uris, fn (string $uri) => str_starts_with($uri, 'api/')));
+        $apiRoutes = array_values(array_filter($uris, fn (string $uri) => str_starts_with($uri, 'api/v1')));
 
-        expect($apiRoutes)->toBeEmpty()
-            ->and(file_exists(base_path('routes/api.php')))->toBeFalse();
+        expect($apiRoutes)->not()->toBeEmpty()
+            ->and($apiRoutes)->toContain('api/v1/conversations')
+            ->and($apiRoutes)->toContain('api/v1/conversations/{conversation}/messages')
+            ->and(file_exists(base_path('routes/api.php')))->toBeTrue();
     });
 });

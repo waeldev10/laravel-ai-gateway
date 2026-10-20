@@ -10,24 +10,7 @@ use InvalidArgumentException;
 
 class AiPromptService
 {
-    /**
-     * Maximum user-owned personas. The system default never counts
-     * toward it.
-     */
-    public const MAX_CUSTOM_PERSONAS = 3;
-
-    /**
-     * The effective personas for a user, in deterministic request order:
-     * the system default first (when present), then the user's active
-     * custom personas (highest priority first, oldest first on ties).
-     *
-     * This is the single centralized resolution path: callers send one
-     * system message per entry and never load personas any other way.
-     * The default is always included; any combination of the custom
-     * personas may be active simultaneously.
-     *
-     * @return Collection<int, AiPersona>
-     */
+   
     public function effectivePersonas(?User $user): Collection
     {
         $personas = new Collection;
@@ -47,13 +30,7 @@ class AiPromptService
         return $personas;
     }
 
-    /**
-     * The user's active custom personas in deterministic order. The
-     * system default is never part of this set — it is always active by
-     * definition and resolved separately.
-     *
-     * @return Collection<int, AiPersona>
-     */
+  
     public function activeCustomPersonas(User $user): Collection
     {
         return $user->aiPersonas()
@@ -114,13 +91,7 @@ class AiPromptService
             ->get();
     }
 
-    /**
-     * Enforced server-side: the UI limit is presentation only.
-     *
-     * @param  array{name?: mixed, system_prompt?: mixed, is_active?: mixed, priority?: mixed}  $attributes
-     *
-     * @throws InvalidArgumentException
-     */
+   
     public function createFor(User $user, array $attributes): AiPersona
     {
         if ($this->customCountFor($user) >= self::MAX_CUSTOM_PERSONAS) {
@@ -137,11 +108,7 @@ class AiPromptService
         ]);
     }
 
-    /**
-     * @param  array{name?: mixed, system_prompt?: mixed, is_active?: mixed, priority?: mixed}  $attributes
-     *
-     * @throws AuthorizationException
-     */
+   
     public function updateFor(User $user, AiPersona $persona, array $attributes): AiPersona
     {
         $this->authorizeOwnership($user, $persona);
@@ -158,9 +125,7 @@ class AiPromptService
         return $persona->refresh();
     }
 
-    /**
-     * @throws AuthorizationException
-     */
+  
     public function deleteFor(User $user, AiPersona $persona): void
     {
         $this->authorizeOwnership($user, $persona);
@@ -168,15 +133,6 @@ class AiPromptService
         $persona->delete();
     }
 
-    /**
-     * Activate or deactivate exactly one custom persona. Each custom
-     * persona toggles independently — any combination may be active at
-     * once. The system default is always active and can never be passed
-     * here: ownership rejects ownerless rows, so deactivating or
-     * selecting the default always fails closed.
-     *
-     * @throws AuthorizationException
-     */
     public function setActiveFor(User $user, AiPersona $persona, bool $active): AiPersona
     {
         $this->authorizeOwnership($user, $persona);
@@ -191,9 +147,7 @@ class AiPromptService
         return $user->aiPersonas()->findOrFail($key);
     }
 
-    /**
-     * @throws AuthorizationException
-     */
+   
     private function authorizeOwnership(User $user, AiPersona $persona): void
     {
         if ($persona->user_id === null || (string) $persona->user_id !== (string) $user->getKey()) {
@@ -201,16 +155,7 @@ class AiPromptService
         }
     }
 
-    /**
-     * Only the four user-editable attributes are ever read: `is_default`
-     * and `user_id` can never be set through user input, so a normal user
-     * can neither claim nor fabricate the system default.
-     *
-     * @param  array<string, mixed>  $attributes
-     * @return array{string, string, bool, int}
-     *
-     * @throws InvalidArgumentException
-     */
+
     private function validated(array $attributes, ?AiPersona $existing = null): array
     {
         $name = trim((string) ($attributes['name'] ?? $existing?->name ?? ''));

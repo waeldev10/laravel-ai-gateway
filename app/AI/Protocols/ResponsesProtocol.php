@@ -5,18 +5,7 @@ namespace App\AI\Protocols;
 use App\AI\Contracts\StreamingAiProtocol;
 use Illuminate\Http\Client\Response;
 
-/**
- * OpenAI Responses API wire protocol: Bearer authentication, a
- * `{model, input}` payload on `/responses`, and the assistant text in the
- * first message item's `output_text` part.
- *
- * Shared only by providers verified to use exactly this contract
- * (e.g. OpenAI itself and OpenCode Zen models served over `/responses`).
- *
- * Streaming uses the same endpoint with `stream: true` and Server-Sent
- * Events: `response.output_text.delta` events carrying a `delta` string,
- * terminated by a `response.completed` event or `data: [DONE]`.
- */
+
 class ResponsesProtocol implements StreamingAiProtocol
 {
     public function endpoint(array $config): string
@@ -118,8 +107,6 @@ class ResponsesProtocol implements StreamingAiProtocol
             return null;
         }
 
-        // Only text deltas; other event types (function calls, metadata)
-        // are intentionally ignored.
         if (($decoded['type'] ?? null) !== 'response.output_text.delta') {
             return null;
         }

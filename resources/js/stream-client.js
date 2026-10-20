@@ -399,51 +399,41 @@ export function setStreamingText(bubble, text) {
     bubble.textContent = text;
 }
 
-// Handoff ownership: set when WE ask Livewire to re-render the message
-// list; the observer below clears the optimistic stream slot on the exact
-// morph that brings the persisted [data-message-id] nodes — so the
-// temporary streaming representation and the canonical persisted message
-// never coexist. Module-scoped (registered once), never a global flag.
-let pendingSlotClear = false;
-let slotObserver = null;
+// Ownership handoff: optimistic stream nodes are adopted into the
+// persisted message list BEFORE asking Livewire to refresh, so the
+// refresh morph reconciles them in place instead of inserting a
+// second copy. Livewire keys nodes by wire:key/id (absent here) with
+// lookahead disabled, i.e. purely positional: the adopted pair sits
+// at exactly the positions the persisted pair occupies in the server
+// HTML, so the morph patches the same elements (content upgraded to
+// rendered markdown, actions, timestamps) rather than adding and
+// removing nodes. At no instant do two nodes represent one message,
+// and no timer, observer, or post-hoc cleanup is involved.
+export function adoptStreamNodes() {
+    const slot = streamSlot();
+    const root = document.querySelector('[data-message-list-root]');
 
-function hasMessageNode(node) {
-    if (!node || node.nodeType !== 1) return false;
-    try {
-        if (node.hasAttribute('data-message-id')) return true;
-        return !!node.querySelector('[data-message-id]');
-    } catch (e) { return false; }
-}
+    if (!slot || !root) return false;
 
-function ensureSlotObserver() {
-    if (slotObserver) return;
-    const target = document.documentElement;
-    if (!target || typeof MutationObserver === 'undefined') return;
-    try {
-        slotObserver = new MutationObserver((mutations) => {
-            if (!pendingSlotClear) return;
-            for (const m of mutations) {
-                for (const n of m.addedNodes) {
-                    // Optimistic stream nodes carry data-stream-node (never
-                    // data-message-id), so only the persisted Livewire
-                    // render trips this handoff.
-                    if (hasMessageNode(n)) {
-                        pendingSlotClear = false;
-                        clearStreamSlot();
-                        return;
-                    }
-                }
-            }
-        });
-        // Observed on the root element so it survives Livewire navigations
-        // (the <html> node itself is never replaced).
-        slotObserver.observe(target, { childList: true, subtree: true });
-    } catch (e) { slotObserver = null; }
+    const nodes = Array.from(slot.querySelectorAll(':scope > [data-stream-node]'));
+
+    if (nodes.length === 0) return false;
+
+    // Keep auxiliary chrome (e.g. the edge navigator) last: adopted
+    // messages go before any trailing non-message node.
+    let anchor = null;
+    const last = root.lastElementChild;
+
+    if (last && !last.hasAttribute('data-message-id') && !last.hasAttribute('data-stream-node')) {
+        anchor = last;
+    }
+
+    nodes.forEach((node) => root.insertBefore(node, anchor));
+
+    return true;
 }
 
 export function refreshMessageList() {
-    pendingSlotClear = true;
-    ensureSlotObserver();
     try {
         if (window.Livewire && typeof window.Livewire.dispatch === 'function') {
             window.Livewire.dispatch('message-sent');
@@ -457,27 +447,6 @@ export function refreshMessageList() {
 export function clearStreamSlot() {
     const slot = streamSlot();
     if (slot) slot.replaceChildren();
-}
-
-export function clearSlotAfterListRefresh(delay = 1200) {
-    // The Livewire message list re-renders from persisted state; the
-    // MutationObserver handoff above drops the optimistic nodes on that
-    // exact morph. The timeout below is a safety fallback only (e.g.
-    // Livewire unavailable in tests): it never drives the normal handoff.
-    // NOTE: there is no `livewire:updated` document event in Livewire v4
-    // (it fires init/initialized/initializing/navigate/navigated/navigating
-    // only), so listening for it left duplicates on screen until the timer.
-    pendingSlotClear = true;
-    ensureSlotObserver();
-    let cleared = false;
-    const clear = () => {
-        if (cleared) return;
-        cleared = true;
-        pendingSlotClear = false;
-        clearStreamSlot();
-    };
-
-    setTimeout(clear, delay);
 }
 
 async function consumeStream(response, onEvent) {

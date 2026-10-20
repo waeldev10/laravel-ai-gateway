@@ -38,21 +38,8 @@ class MessageService
         private readonly AiMemoryService $memories,
     ) {}
 
-    /**
-     * Number of messages loaded per history page.
-     *
-     * The Web Chat never loads the whole conversation at once: the initial
-     * paint shows only this many latest messages and older ones are fetched
-     * progressively with a cursor (see latestPageFor/olderPageFor). The AI
-     * context window is bounded separately in AiContextService and is
-     * unaffected by this value.
-     */
     public const HISTORY_PAGE_SIZE = 30;
 
-    /**
-     * Retrieve a conversation's messages in chronological order after
-     * verifying the user is authorised to access the conversation.
-     */
     public function listFor(User $user, Conversation $conversation): Collection
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -63,15 +50,6 @@ class MessageService
             ->get();
     }
 
-    /**
-     * Retrieve the latest page of a conversation's history for the initial
-     * chat paint: at most HISTORY_PAGE_SIZE messages, oldest first.
-     *
-     * Cursor-based (ULID `id` ordering, which is time-sortable), never
-     * OFFSET: the extra probe row decides `hasMore` without a COUNT query.
-     *
-     * @return array{messages: Collection<int, Message>, hasMore: bool, oldestCursor: ?string}
-     */
     public function latestPageFor(User $user, Conversation $conversation, int $limit = self::HISTORY_PAGE_SIZE): array
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -79,15 +57,6 @@ class MessageService
         return $this->historyPage($conversation, null, $limit);
     }
 
-    /**
-     * Retrieve the next older page before the given cursor message id.
-     *
-     * Conceptually: WHERE conversation_id = ? AND id < ? ORDER BY id DESC
-     * LIMIT n. Returned oldest-first for display; `oldestCursor` is the
-     * cursor for the following page, `hasMore` is false when exhausted.
-     *
-     * @return array{messages: Collection<int, Message>, hasMore: bool, oldestCursor: ?string}
-     */
     public function olderPageFor(User $user, Conversation $conversation, ?string $beforeId, int $limit = self::HISTORY_PAGE_SIZE): array
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -95,11 +64,6 @@ class MessageService
         return $this->historyPage($conversation, $beforeId, $limit);
     }
 
-    /**
-     * Shared cursor page behind latestPageFor() and olderPageFor().
-     *
-     * @return array{messages: Collection<int, Message>, hasMore: bool, oldestCursor: ?string}
-     */
     private function historyPage(Conversation $conversation, ?string $beforeId, int $limit): array
     {
         $limit = max(1, min($limit, self::HISTORY_PAGE_SIZE));
@@ -121,11 +85,6 @@ class MessageService
         ];
     }
 
-    /**
-     * Persist a user message on the given conversation after verifying the
-     * user is authorised to access it. The conversation and role are always
-     * determined by the server, never taken from the client.
-     */
     public function createUserMessage(User $user, Conversation $conversation, string $content, AiSource $source = AiSource::Web): Message
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -147,16 +106,6 @@ class MessageService
         return $message;
     }
 
-    /**
-     * Persist a user message and generate the assistant's reply.
-     *
-     * The user message is persisted BEFORE calling the external AI provider,
-     * so a provider failure never loses it: the user message stays while no
-     * assistant message is created. Only normalized messages cross the AI
-     * boundary; this service never knows provider payloads or responses.
-     *
-     * @throws AiException
-     */
     public function sendUserMessage(User $user, Conversation $conversation, string $content, AiSource $source = AiSource::Web): Message
     {
         $this->createUserMessage($user, $conversation, $content, $source);
@@ -164,20 +113,6 @@ class MessageService
         return $this->generateReply($user, $conversation, $source);
     }
 
-    /**
-     * Generate and persist the assistant's reply for the current
-     * conversation history.
-     *
-     * Context (persona + memory + bounded recent history) is resolved
-     * first; only the normalized result crosses the AI boundary.
-     *
-     * Application-level rate limiting runs here, at the single choke
-     * point for assistant generation, keyed by the acting user — alongside
-     * the separate application usage policy (window + cooldown). Upstream
-     * provider limits surface as provider failures, never as usage blocks.
-     *
-     * @throws AiException
-     */
     public function generateReply(User $user, Conversation $conversation, AiSource $source = AiSource::Web): Message
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -215,25 +150,6 @@ class MessageService
         return $assistant;
     }
 
-    /**
-     * Stream the assistant's reply as incremental text deltas.
-     *
-     * Yields each upstream chunk immediately so the controller can forward
-     * it to the browser. The final assistant message is persisted exactly
-     * once, after the stream completes successfully — never per chunk.
-     *
-     * When the browser aborts mid-stream (Stop), the text received so far
-     * is preserved as a `partial` assistant message that can be continued
-     * later, instead of being lost. An abort before any text arrived keeps
-     * the previous guarantee: no assistant message at all.
-     *
-     * The caller must have persisted the user message already (via
-     * `createUserMessage`); history is read here so it includes it.
-     *
-     * @return Generator<int, string, mixed, Message>
-     *
-     * @throws AiException
-     */
     public function streamReply(User $user, Conversation $conversation, AiSource $source = AiSource::Web): Generator
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -291,19 +207,6 @@ class MessageService
         return $assistant;
     }
 
-    /**
-     * Continue an interrupted (partial) assistant reply.
-     *
-     * The partial message must be the latest message in the conversation;
-     * its text is sent back as conversation context so the provider
-     * continues from it, and only the newly streamed text is yielded. The
-     * message is updated exactly once (single UPDATE, never per chunk) and
-     * marked complete — or kept partial when aborted again.
-     *
-     * @return Generator<int, string, mixed, Message>
-     *
-     * @throws AiException
-     */
     public function continueReply(User $user, Conversation $conversation, AiSource $source = AiSource::Web): Generator
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -380,24 +283,6 @@ class MessageService
         return $assistant;
     }
 
-    /**
-     * Regenerate the assistant reply for one message and stream it.
-     *
-     * The given message may be a user message (its reply is regenerated)
-     * or an assistant message (it is regenerated from its preceding user
-     * message). The conversation is linear history, so everything after
-     * the anchor user message is removed first — a stale reply must never
-     * survive next to its replacement, and later exchanges depended on
-     * the old context. The fresh reply streams exactly like a new one
-     * (single create, abort preserves a partial).
-     *
-     * The usage policy is enforced before any truncation: a blocked user
-     * loses no history.
-     *
-     * @return Generator<int, string, mixed, Message>
-     *
-     * @throws AiException
-     */
     public function regenerateReply(User $user, Conversation $conversation, Message $message, AiSource $source = AiSource::Web): Generator
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -468,13 +353,6 @@ class MessageService
         return $assistant;
     }
 
-    /**
-     * Resolve the user message a regeneration is anchored to: the message
-     * itself when it is a user message, otherwise the nearest preceding
-     * user message. Membership is verified against the conversation.
-     *
-     * @throws AiProviderException
-     */
     private function regenerationAnchor(Conversation $conversation, Message $message): Message
     {
         $ordered = $conversation->messages()
@@ -511,11 +389,6 @@ class MessageService
         return $anchor;
     }
 
-    /**
-     * Delete every message chronologically after the anchor, scoped to its
-     * conversation. Keeps linear history consistent after an edit or a
-     * regeneration: dependents of replaced content cannot linger.
-     */
     private function truncateAfter(Message $anchor): void
     {
         $ordered = Message::query()
@@ -541,15 +414,7 @@ class MessageService
         }
     }
 
-    /**
-     * Ids a regeneration for the given message will remove: the target
-     * assistant message itself plus everything chronologically after the
-     * anchor user message. Returned before streaming so the browser can
-     * drop the same nodes optimistically; `regenerateReply()` enforces
-     * the identical truncation authoritatively.
-     *
-     * @return array<int, string>
-     */
+   
     public function idsRemovedByRegeneration(User $user, Conversation $conversation, Message $message): array
     {
         Gate::forUser($user)->authorize('view', $conversation);
@@ -601,13 +466,7 @@ class MessageService
         return $ids;
     }
 
-    /**
-     * Guard the application's AI budget against a single user triggering
-     * too many generations. This is separate from upstream provider
-     * limits, which the provider layer reports as rate-limit failures.
-     *
-     * @throws AiRateLimitException
-     */
+    
     private function enforceGenerationRateLimit(User $user): void
     {
         $key = "ai-generate:{$user->getKey()}";
@@ -620,14 +479,7 @@ class MessageService
         RateLimiter::hit($key, 60);
     }
 
-    /**
-     * Enforce the application usage policy (usage window + cooldown).
-     * A blocked attempt is persisted as a `blocked` AI request and
-     * audited — the provider is never called — then a clean domain
-     * exception carries the remaining cooldown to the caller.
-     *
-     * @throws AiUsageLimitException
-     */
+
     private function enforceUsagePolicy(User $user, ?Conversation $conversation, AiSource $source): void
     {
         $wasCooling = $this->usage->remainingCooldown($user) !== null;
@@ -652,15 +504,6 @@ class MessageService
         }
     }
 
-    /**
-     * Mark an AI request completed and audit it. Operational identifiers
-     * only — message content is never written to request or audit rows.
-     *
-     * A successful exchange is also the memory capture point: durable
-     * self-facts from the latest user message persist user-scoped, so
-     * later conversations can recall them. Capture is best-effort and
-     * never breaks the request.
-     */
     private function completeRequest(User $user, AiSource $source, Conversation $conversation, AiRequest $aiRequest, Message $assistant, bool $interrupted): void
     {
         $this->requests->complete($aiRequest, $assistant);
@@ -687,11 +530,6 @@ class MessageService
         }
     }
 
-    /**
-     * Mark an AI request failed and audit both the request failure and
-     * the provider failure. Sanitized error type/code only — never keys,
-     * payloads, prompts, or completions.
-     */
     private function failRequest(User $user, AiSource $source, Conversation $conversation, AiRequest $aiRequest, AiException $failure): void
     {
         $this->requests->fail($aiRequest, $failure);
@@ -708,9 +546,6 @@ class MessageService
         $this->audit->record($user, $source, AuditLogService::PROVIDER_FAILURE, 'failed', $metadata, $conversation);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     private function aiMetadata(?string $provider, ?string $model, Conversation $conversation): array
     {
         return array_filter([
@@ -720,14 +555,6 @@ class MessageService
         ]);
     }
 
-    /**
-     * Update a user-authored message after verifying ownership.
-     *
-     * Authorization mirrors creation: the acting user must own the parent
-     * conversation (the existing ConversationPolicy `view` rule), and only
-     * user-role messages are editable — assistant messages are never exposed
-     * for editing. Shape validation stays with the caller.
-     */
     public function updateUserMessage(User $user, Message $message, string $content, AiSource $source = AiSource::Web): Message
     {
         if ($message->role !== MessageRole::User) {

@@ -26,60 +26,44 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Shared provider orchestration: configuration, timeouts, centralized
- * retries for transient failures, failure normalization, and safe logging.
- *
- * This class knows no concrete protocol: each provider declares the
- * protocols it supports as configuration data, and all wire behavior
- * (endpoint, authentication, payload, extraction) lives in the selected
- * AiProtocol. Adding a protocol never requires editing this class.
- */
+
 abstract class AbstractAiProvider implements AiProvider
 {
-    /**
-     * Config key under `ai.providers.*`.
-     */
+    
     abstract protected function providerKey(): string;
 
-    /**
-     * Display name used in safe logs and technical messages. Never a secret.
-     */
     abstract protected function providerName(): string;
 
-    /**
-     * Protocol used when configuration does not name one explicitly.
-     */
     abstract protected function defaultProtocol(): string;
 
-    /**
-     * Protocols this provider supports, as configuration data mapping
-     * protocol names to implementations. Guards against misconfiguration.
-     *
-     * @return array<string, class-string<AiProtocol>>
-     */
     abstract protected function supportedProtocols(): array;
 
     public function __construct(private readonly AiRetryPolicy $retry) {}
 
     /**
-     * @param  array<int, array{role: string, content: string}>  $messages
-     */
+     * يرسل رسائل المحادثة إلى المزود ويعيد الرد كنص كامل.
+    */
     final public function generate(array $messages): string
-    {
+    {   
+      
         $config = $this->validatedConfig();
+
         $protocol = $this->protocol($config);
+
         $timeout = max(1, (int) ($config['timeout'] ?? 30));
 
-        $attempt = 0;
+        $attempt = 0; 
 
+        // تستمر المحاولات حتى نجاح الطلب أو رمي استثناء نهائي
         while (true) {
+
             try {
                 $response = Http::timeout($timeout)
                     ->withHeaders($protocol->headers($config))
                     ->acceptJson()
                     ->post($protocol->endpoint($config), $protocol->payload($messages, $config));
             } catch (ConnectionException $e) {
+
                 $failure = $this->connectionFailure($e);
 
                 if (! $this->retry->shouldRetry($failure, $attempt)) {
@@ -108,18 +92,7 @@ abstract class AbstractAiProvider implements AiProvider
     }
 
     /**
-     * Stream the assistant's reply as incremental text deltas.
-     *
-     * The upstream response is consumed incrementally from the PSR stream —
-     * never buffered via `body()` — and each protocol-owned delta is
-     * yielded immediately so callers can forward it to the browser.
-     *
-     * Retries apply only before the first upstream byte, reusing the same
-     * transient-failure policy as `generate()`. Once the stream has started
-     * (HTTP 200 accepted), failures surface immediately without retrying.
-     *
-     * @param  array<int, array{role: string, content: string}>  $messages
-     * @return Generator<int, string, mixed, void>
+     * يطلب ردًا متدفقًا ويُنتج أجزاء النص عند وصولها.
      */
     final public function stream(array $messages): Generator
     {
@@ -137,6 +110,7 @@ abstract class AbstractAiProvider implements AiProvider
         $attempt = 0;
 
         while (true) {
+
             try {
                 $response = Http::timeout($timeout)
                     ->withHeaders($protocol->headers($config))
@@ -144,6 +118,7 @@ abstract class AbstractAiProvider implements AiProvider
                     ->withOptions(['stream' => true])
                     ->post($protocol->streamEndpoint($config), $protocol->streamPayload($messages, $config));
             } catch (ConnectionException $e) {
+
                 $failure = $this->connectionFailure($e);
 
                 if (! $this->retry->shouldRetry($failure, $attempt)) {
@@ -175,15 +150,6 @@ abstract class AbstractAiProvider implements AiProvider
         }
     }
 
-    /**
-     * Read the upstream PSR body incrementally and yield protocol-owned
-     * text deltas as they arrive. Malformed single lines are skipped; an
-     * empty stream (no usable text at all) fails as an invalid response.
-     *
-     * @return Generator<int, string, mixed, void>
-     *
-     * @throws AiInvalidResponseException
-     */
     private function yieldStreamDeltas(Response $response, StreamingAiProtocol $protocol): Generator
     {
         $body = $response->toPsrResponse()->getBody();
@@ -196,6 +162,7 @@ abstract class AbstractAiProvider implements AiProvider
             }
         }
 
+        // الاحتفاظ بالبيانات التي وصلت ولم يكتمل سطرها بعد.
         $buffer = '';
         $yielded = 0;
 
@@ -209,7 +176,7 @@ abstract class AbstractAiProvider implements AiProvider
 
                 continue;
             }
-
+            // ضم الجزء الجديد إلى البيانات غير المعالجة.
             $buffer .= $chunk;
 
             while (($pos = strpos($buffer, "\n")) !== false) {
@@ -254,17 +221,7 @@ abstract class AbstractAiProvider implements AiProvider
             );
         }
     }
-
-    /**
-     * Select the protocol from configuration, falling back to the
-     * provider default. Protocol selection is explicit data — never
-     * inferred from model names in PHP. The supported set comes from
-     * the concrete provider, so new protocols never touch this class.
-     *
-     * @param  array<string, mixed>  $config
-     *
-     * @throws AiProviderException
-     */
+    
     protected function protocol(array $config): AiProtocol
     {
         $name = strtolower(trim((string) ($config['protocol'] ?? $this->defaultProtocol())));
@@ -289,11 +246,6 @@ abstract class AbstractAiProvider implements AiProvider
         return $protocol;
     }
 
-    /**
-     * @return array<string, mixed>
-     *
-     * @throws AiProviderException
-     */
     protected function validatedConfig(): array
     {
         $config = config("ai.providers.{$this->providerKey()}", []);
@@ -305,15 +257,10 @@ abstract class AbstractAiProvider implements AiProvider
         if (! isset($config['model']) || ! is_string($config['model']) || $config['model'] === '') {
             throw new AiProviderException("The {$this->providerName()} provider is not configured. Missing model.", $this->providerKey());
         }
-
+        
         return $config;
     }
 
-    /**
-     * Distinguish timeouts from other connection failures using the
-     * transported cURL diagnostics. Both are transient; the split keeps
-     * error reporting honest.
-     */
     private function connectionFailure(ConnectionException $e): AiException
     {
         $message = strtolower($e->getMessage());
@@ -330,9 +277,6 @@ abstract class AbstractAiProvider implements AiProvider
         return new AiConnectionException($this->providerName(), $e);
     }
 
-    /**
-     * @throws AiInvalidResponseException
-     */
     private function validatedText(Response $response, AiProtocol $protocol): string
     {
         $text = $protocol->extractText($response);
@@ -352,15 +296,6 @@ abstract class AbstractAiProvider implements AiProvider
         return $text;
     }
 
-    /**
-     * Normalize an upstream failure into a specific technical exception.
-     *
-     * Classification uses the HTTP status first, then provider signals
-     * (error code, error type, sanitized message) — status alone cannot
-     * distinguish e.g. a 400 invalid request from a 400 model-not-found,
-     * or a 429 slow-down from a 429 empty balance. Raw provider text is
-     * only ever used for these internal signals, never shown to users.
-     */
     private function normalizedFailure(Response $response): AiException
     {
         $status = $response->status();
@@ -401,12 +336,6 @@ abstract class AbstractAiProvider implements AiProvider
         return $this->withDiagnosticDetail($failure, $response);
     }
 
-    /**
-     * Match normalized signals against plain substrings, or `/.../`
-     * entries treated as case-insensitive regular expressions.
-     *
-     * @param  array<int, string>  $patterns
-     */
     private static function matchesAny(string $signals, array $patterns): bool
     {
         if ($signals === '') {
@@ -520,15 +449,6 @@ abstract class AbstractAiProvider implements AiProvider
         return $failure->withDetail($detail);
     }
 
-    /**
-     * Extract a sanitized provider diagnostic from known error shapes
-     * only (OpenAI-style `error.message`/`error.code`/`error.type`,
-     * Gemini-style `error.status`, or a top-level `message`). Values are
-     * truncated plain strings — never raw bodies, headers, or
-     * credentials. The `type` feeds internal classification only.
-     *
-     * @return array{code: ?string, type: ?string, message: ?string}
-     */
     private function sanitizedError(Response $response): array
     {
         $data = $response->json();

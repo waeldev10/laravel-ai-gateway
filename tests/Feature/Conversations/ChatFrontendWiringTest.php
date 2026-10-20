@@ -21,9 +21,8 @@ describe('chat frontend wiring', function () {
             'scrollToBottom',
             'buildUserNode',
             'buildAssistantNode',
+            'adoptStreamNodes',
             'refreshMessageList',
-            'clearStreamSlot',
-            'clearSlotAfterListRefresh',
             'httpErrorMessage',
             'postEventStream',
             'shareResponse',
@@ -45,10 +44,10 @@ describe('chat frontend wiring', function () {
 
         foreach ([
             'abortActiveGeneration',
+            'adoptStreamNodes',
             'buildAssistantNode',
             'buildUserNode',
             'chatPhase',
-            'clearSlotAfterListRefresh',
             'nearBottom',
             'postEventStream',
             'refreshMessageList',
@@ -71,9 +70,9 @@ describe('chat frontend wiring', function () {
         expect($source)->toContain("from './stream-client.js'");
 
         foreach ([
+            'adoptStreamNodes',
             'buildAssistantNode',
             'chatPhase',
-            'clearSlotAfterListRefresh',
             'conversationId',
             'nearBottom',
             'postEventStream',
@@ -98,15 +97,31 @@ describe('chat frontend wiring', function () {
             ->and($source)->not()->toContain("document.addEventListener('close-edit-message'");
     });
 
-    test('stream handoff clears optimistic nodes on the persisted render, never on a fake event', function () {
+    test('stream handoff adopts optimistic nodes into the list instead of clearing them later', function () {
         $client = file_get_contents(resource_path('js/stream-client.js'));
+        $composer = file_get_contents(resource_path('js/chat-stream.js'));
+        $actions = file_get_contents(resource_path('js/message-actions.js'));
 
-        // `livewire:updated` is not a Livewire v4 document event: waiting
-        // on it left optimistic + persisted nodes coexisting. The handoff
-        // must observe the actual [data-message-id] morph instead.
-        expect($client)->toContain('MutationObserver')
-            ->and($client)->toContain('data-message-id')
-            ->and($client)->not()->toContain("addEventListener('livewire:updated'");
+        // Single ownership: on completion the optimistic nodes move
+        // into the persisted list BEFORE the refresh, so the morph
+        // reconciles them in place. No second copy is ever inserted,
+        // and no timer, observer, or post-hoc cleanup is involved.
+        expect($client)->toContain('export function adoptStreamNodes(')
+            ->and($client)->toContain('[data-message-list-root]')
+            ->and($composer)->toContain('adoptStreamNodes()')
+            ->and($actions)->toContain('adoptStreamNodes()');
+
+        // No timer-driven reconciliation and no duplicate sweeping in
+        // any of the stream flows: completion handling is synchronous.
+        // (`livewire:updated` is not a Livewire v4 document event.)
+        foreach (['stream-client.js', 'chat-stream.js', 'message-actions.js'] as $file) {
+            $source = file_get_contents(resource_path("js/{$file}"));
+
+            expect($source)->not()->toContain('setTimeout')
+                ->and($source)->not()->toContain('MutationObserver')
+                ->and($source)->not()->toContain('clearSlotAfterListRefresh')
+                ->and($source)->not()->toContain("addEventListener('livewire:updated'");
+        }
     });
 
     test('chat transitions never force a full browser reload', function () {

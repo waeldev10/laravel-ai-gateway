@@ -15,28 +15,7 @@ class AiContextService
         private readonly AiMemoryService $memories,
     ) {}
 
-    /**
-     * Build the final normalized provider input for one AI attempt.
-     *
-     * Layered, cheapest-first, always bounded:
-     *
-     *   effective personas (system default + active customs, one system
-     *     message each, deterministic order via AiPromptService)
-     *     + relevant long-term memories (ranked AiMemory rows, own user
-     *       only, bounded by configuration)
-     *     + recent conversation history (bounded, chronological)
-     *
-     * Providers receive plain `{role, content}` messages only: no users,
-     * no conversations, no personas, no memory models cross the AI
-     * boundary. Memory logic never lives in providers or protocols.
-     *
-     * With no persona and no memories the output is exactly the recent
-     * history — and with an empty history, an empty array.
-     *
-     * @return array<int, array{role: string, content: string}>
-     *
-     * @throws AuthorizationException
-     */
+
     public function build(User $user, Conversation $conversation): array
     {
         if ((string) $conversation->user_id !== (string) $user->getKey()) {
@@ -46,6 +25,7 @@ class AiContextService
         $messages = [];
 
         foreach ($this->prompts->effectivePersonas($user) as $persona) {
+            
             $text = trim((string) $persona->system_prompt);
 
             if ($text !== '') {
@@ -76,12 +56,7 @@ class AiContextService
         return $messages;
     }
 
-    /**
-     * Recent messages only, oldest first, capped by configuration — never
-     * the entire conversation history.
-     *
-     * @return array<int, array{role: string, content: string}>
-     */
+  
     private function recentHistory(Conversation $conversation): array
     {
         $limit = max(1, (int) config('ai.context.history_limit', 20));
@@ -102,13 +77,7 @@ class AiContextService
             ->all();
     }
 
-    /**
-     * The relevance cue is the current user message: the latest history
-     * entry when it is user-authored (the caller persists it before
-     * building), otherwise an empty cue that falls back to oldest-first.
-     *
-     * @param  array<int, array{role: string, content: string}>  $history
-     */
+   
     private function cue(array $history): string
     {
         if ($history === []) {
@@ -122,10 +91,6 @@ class AiContextService
             : '';
     }
 
-    /**
-     * One compact system block of the user's own top-ranked memories —
-     * strictly per-user isolated, bounded by configuration.
-     */
     private function memoryBlock(User $user, string $cue): ?string
     {
         $facts = $this->memories

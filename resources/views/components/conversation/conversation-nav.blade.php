@@ -119,7 +119,14 @@
                             @if($context !== 'page')
                                 <span class="shrink-0 whitespace-nowrap text-[11px] text-zinc-400 dark:text-zinc-500 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150">{{ \App\Support\ArabicDateTime::timeOnly($c->created_at) }}</span>
                             @endif
-                            <div class="relative shrink-0">
+                            {{-- Conversation actions: desktop/tablet only. Hidden
+                                 below md (no hover on touch) via pure CSS —
+                                 display:none removes the wrapper (button +
+                                 tooltips) from flex layout entirely, so no
+                                 gap artifact remains. Desktop rendering is
+                                 untouched (md:block blockifies to a flex
+                                 item as before). --}}
+                            <div class="relative hidden shrink-0 md:block">
                                 <button @click.stop="openMenu(@js((string) $c->id), $el)" aria-label="خيارات {{ $c->title }}"
                                     aria-haspopup="menu" :aria-expanded="menuId === @js((string) $c->id) ? 'true' : 'false'" data-title="{{ $c->title }}"
                                     data-url="{{ route('conversations.show', $c) }}"

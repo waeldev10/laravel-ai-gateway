@@ -44,5 +44,24 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(20)->by('ai-stream:'.$key);
         });
+
+        // Token API guard: protects the HTTP API itself (requests/minute
+        // per token or user). Separate from the AI application usage
+        // policy (AiUsageService window + cooldown) enforced inside
+        // MessageService, and from upstream provider limits.
+        RateLimiter::for('api', function (Request $request) {
+            $key = $request->user()?->getKey() ?? $request->ip();
+
+            return Limit::perMinute(60)->by('api:'.$key);
+        });
+
+        // Stricter guard for the expensive synchronous AI generation
+        // endpoint (POST messages). Mirrors the web `ai-stream` budget
+        // but keyed for token clients.
+        RateLimiter::for('api-ai', function (Request $request) {
+            $key = $request->user()?->getKey() ?? $request->ip();
+
+            return Limit::perMinute(20)->by('api-ai:'.$key);
+        });
     }
 }

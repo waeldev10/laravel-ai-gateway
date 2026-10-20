@@ -18,16 +18,7 @@ use App\AI\Exceptions\AiTimeoutException;
 use App\AI\Exceptions\AiUnavailableException;
 use App\AI\Exceptions\AiUsageLimitException;
 
-/**
- * Centralized application-level mapping from technical AI exceptions to
- * safe, actionable Arabic user-facing messages.
- *
- * Backend exceptions only classify failures (provider, status, request
- * id, sanitized diagnostic); they never format user text themselves —
- * every `userMessage()` delegates here, so this is the single place
- * where AI failure copy lives. Nothing returned here ever contains keys,
- * headers, payloads, prompts, or raw provider errors.
- */
+
 class AiErrorPresenter
 {
     public static function messageFor(AiException $failure): string
@@ -57,11 +48,7 @@ class AiErrorPresenter
         };
     }
 
-    /**
-     * Application-level usage budget (AiUsageService) — deliberately
-     * worded differently from the provider rate-limit message below so
-     * the two systems are never confused.
-     */
+
     private static function usageLimitMessage(AiUsageLimitException $failure): string
     {
         if ($failure->retryAfterSeconds() !== null && $failure->retryAfterSeconds() > 0) {
@@ -71,10 +58,6 @@ class AiErrorPresenter
         return 'لقد وصلت إلى حد الاستخدام المسموح. حاول مرة أخرى لاحقاً.';
     }
 
-    /**
-     * Upstream provider rate limit (HTTP 429). When the provider tells
-     * us how long to wait, the message says so.
-     */
     private static function providerRateLimitMessage(AiRateLimitException $failure): string
     {
         $base = 'تم الوصول إلى الحد المسموح للطلبات. يرجى الانتظار ثم المحاولة مرة أخرى.';

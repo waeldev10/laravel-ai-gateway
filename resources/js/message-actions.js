@@ -6,9 +6,9 @@
 // updates below are optimistic and always reconciled with a Livewire
 // list refresh from persisted state.
 import {
+    adoptStreamNodes,
     buildAssistantNode,
     chatPhase,
-    clearSlotAfterListRefresh,
     conversationId,
     isUsageLimitError,
     nearBottom,
@@ -170,9 +170,8 @@ async function runActionStream({ url, anchorNode, mode }) {
     if (aborted) {
         setChatPhase('stopped');
         toast('warning', 'تم الإيقاف', 'تم حفظ الجزء المولّد. يمكنك المواصلة بزر مواصلة التوليد.');
+        adoptStreamNodes();
         refreshMessageList();
-        setTimeout(refreshMessageList, 2000);
-        clearSlotAfterListRefresh(2600);
         return;
     }
 
@@ -185,15 +184,18 @@ async function runActionStream({ url, anchorNode, mode }) {
             toast('error', 'تعذر الحصول على رد المساعد', streamError || 'تعذر الحصول على رد المساعد. حاول مرة أخرى.');
         }
 
+        adoptStreamNodes();
         refreshMessageList();
-        clearSlotAfterListRefresh();
         return;
     }
 
     setChatPhase('idle');
     scrollToBottom(scroller);
+    // Adopt first: the optimistic placeholder joins the persisted list,
+    // then the refresh morph reconciles it with the fresh reply in
+    // place. No second copy is ever inserted.
+    adoptStreamNodes();
     refreshMessageList();
-    clearSlotAfterListRefresh();
 }
 
 async function handleRegenerate(btn) {
@@ -222,9 +224,14 @@ async function handleContinue(btn) {
 }
 
 function handleShare(btn) {
-    const block = btn.closest('[data-message-id]');
+    // The action buttons themselves carry data-message-id, so
+    // closest('[data-message-id]') would match the BUTTON (closest
+    // includes self) and find no text inside it. Resolve through the
+    // button's own stable id to the persisted message block instead.
+    const messageId = btn.dataset.messageId ? String(btn.dataset.messageId) : '';
+    const block = messageId ? messageNode(messageId) : btn.closest('[data-message-id]');
     const node = block ? block.querySelector('[data-full-text]') : null;
-    const text = node ? node.innerText : '';
+    const text = node ? node.innerText.trim() : '';
 
     if (!text) {
         toast('error', 'تعذر المشاركة', 'لا يوجد نص للمشاركة.');

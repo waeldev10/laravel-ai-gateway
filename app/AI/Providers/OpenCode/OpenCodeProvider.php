@@ -6,13 +6,7 @@ use App\AI\Protocols\ChatCompletionsProtocol;
 use App\AI\Protocols\ResponsesProtocol;
 use App\AI\Providers\AbstractAiProvider;
 
-/**
- * OpenCode Zen (opencode.ai/zen): the hosted inference gateway, not the
- * local opencode server API. Zen serves different models over different
- * protocols, so the protocol is explicit configuration — never inferred
- * from the model name. Nothing OpenCode-specific leaks outside this
- * provider and its selected protocol.
- */
+
 class OpenCodeProvider extends AbstractAiProvider
 {
     protected function providerKey(): string

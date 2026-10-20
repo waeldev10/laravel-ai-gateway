@@ -10,18 +10,7 @@ use Illuminate\Support\Facades\Cache;
 
 class AiUsageService
 {
-    /**
-     * Application-level AI usage budget: up to `max_requests` generations
-     * per `window_minutes`. Exhaustion blocks the user for
-     * `cooldown_minutes`, then usage is allowed again.
-     *
-     * This is our own business rule — separate from HTTP request
-     * throttling (RateLimiter/throttle middleware), upstream provider
-     * rate limits (HTTP 429 → AiRateLimitException), and the provider
-     * retry policy (AiRetryPolicy).
-     *
-     * @throws AiUsageLimitException
-     */
+  
     public function check(User $user): void
     {
         if (! $this->isEnabled()) {
@@ -47,9 +36,6 @@ class AiUsageService
         }
     }
 
-    /**
-     * Remaining cooldown in seconds, or null when not cooling down.
-     */
     public function remainingCooldown(User $user): ?int
     {
         $until = Cache::get($this->cooldownKey($user));
@@ -69,10 +55,6 @@ class AiUsageService
         return $remaining;
     }
 
-    /**
-     * Generations attempted inside the current usage window. Blocked
-     * attempts never consume budget — only real provider attempts do.
-     */
     public function windowCount(User $user): int
     {
         return AiRequest::query()

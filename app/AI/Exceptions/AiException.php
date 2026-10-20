@@ -34,11 +34,6 @@ abstract class AiException extends RuntimeException
         return $this->requestId;
     }
 
-    /**
-     * Sanitized provider diagnostic (e.g. "[invalid_api_key] Incorrect API
-     * key provided"). Built only from known error shapes and truncated —
-     * safe for logs, never shown to end users as-is.
-     */
     public function detail(): ?string
     {
         return $this->detail;
@@ -51,9 +46,5 @@ abstract class AiException extends RuntimeException
         return $this;
     }
 
-    /**
-     * Safe, user-facing message. Never contains keys, headers, payloads,
-     * raw provider errors, or stack traces.
-     */
     abstract public function userMessage(): string;
 }

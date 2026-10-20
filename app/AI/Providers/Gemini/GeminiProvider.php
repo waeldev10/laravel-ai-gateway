@@ -3,6 +3,7 @@
 namespace App\AI\Providers\Gemini;
 
 use App\AI\Protocols\GenerateContentProtocol;
+use App\AI\Protocols\InteractionsProtocol;
 use App\AI\Providers\AbstractAiProvider;
 
 class GeminiProvider extends AbstractAiProvider
@@ -26,6 +27,7 @@ class GeminiProvider extends AbstractAiProvider
     {
         return [
             'generate_content' => GenerateContentProtocol::class,
+            'interactions' => InteractionsProtocol::class,
         ];
     }
 }

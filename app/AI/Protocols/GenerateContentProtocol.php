@@ -5,16 +5,7 @@ namespace App\AI\Protocols;
 use App\AI\Contracts\StreamingAiProtocol;
 use Illuminate\Http\Client\Response;
 
-/**
- * Gemini generateContent wire protocol: key-by-header authentication, a
- * `{contents}` payload on `/models/{model}:generateContent` with `user`
- * and `model` roles, and the assistant text at
- * `candidates.0.content.parts.0.text`.
- *
- * Streaming uses `:streamGenerateContent?alt=sse` with the same payload;
- * each SSE data line carries a full `candidates` chunk and the stream ends
- * when the body ends.
- */
+
 class GenerateContentProtocol implements StreamingAiProtocol
 {
     public function endpoint(array $config): string
@@ -26,8 +17,6 @@ class GenerateContentProtocol implements StreamingAiProtocol
 
     public function headers(array $config): array
     {
-        // The key travels in a header so it never appears in URLs that
-        // could end up in logs or error reports.
         return ['x-goog-api-key' => (string) ($config['api_key'] ?? '')];
     }
 
@@ -35,7 +24,7 @@ class GenerateContentProtocol implements StreamingAiProtocol
     {
         return [
             'contents' => array_map(fn (array $message) => [
-                // Gemini uses "model" where the chat domain uses "assistant".
+          
                 'role' => $message['role'] === 'assistant' ? 'model' : 'user',
                 'parts' => [['text' => $message['content']]],
             ], $messages),

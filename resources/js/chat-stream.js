@@ -5,10 +5,10 @@
 // only the composer form (new + existing conversations).
 import {
     abortActiveGeneration,
+    adoptStreamNodes,
     buildAssistantNode,
     buildUserNode,
     chatPhase,
-    clearSlotAfterListRefresh,
     initUsageLimitUI,
     isUsageLimited,
     isUsageLimitError,
@@ -266,9 +266,9 @@ function initComposer(root) {    if (!root || root.dataset.chatInit === '1') ret
 
         if (aborted) {
             // The server preserves the received text as a partial reply on
-            // abort; refresh twice (now + delayed) so the persisted partial
-            // — with its Continue action — appears even if the server needs
-            // a moment to detect the abort.
+            // abort. Adopt the optimistic nodes into the list so the
+            // refresh morph reconciles them with the persisted partial in
+            // place, then re-render once from persisted state.
             setChatPhase('stopped');
             toast('warning', 'تم الإيقاف', 'تم حفظ الجزء المولّد. يمكنك المواصلة بزر مواصلة التوليد.');
 
@@ -277,9 +277,8 @@ function initComposer(root) {    if (!root || root.dataset.chatInit === '1') ret
                 return;
             }
 
+            adoptStreamNodes();
             refreshMessageList();
-            setTimeout(refreshMessageList, 2000);
-            clearSlotAfterListRefresh(2600);
             return;
         }
 
@@ -297,8 +296,8 @@ function initComposer(root) {    if (!root || root.dataset.chatInit === '1') ret
                 return;
             }
 
+            adoptStreamNodes();
             refreshMessageList();
-            clearSlotAfterListRefresh();
             return;
         }
 
@@ -313,8 +312,8 @@ function initComposer(root) {    if (!root || root.dataset.chatInit === '1') ret
                 return;
             }
 
+            adoptStreamNodes();
             refreshMessageList();
-            clearSlotAfterListRefresh();
             return;
         }
 
@@ -331,8 +330,11 @@ function initComposer(root) {    if (!root || root.dataset.chatInit === '1') ret
 
         setChatPhase('idle');
         scrollToBottom(scroller);
+        // Adopt first: the optimistic pair moves into the persisted list,
+        // then the refresh morph upgrades the same elements in place.
+        // No second copy is ever inserted.
+        adoptStreamNodes();
         refreshMessageList();
-        clearSlotAfterListRefresh();
     });
 }
 

@@ -8,20 +8,7 @@ use App\AI\Exceptions\AiRateLimitException;
 use App\AI\Exceptions\AiTimeoutException;
 use App\AI\Exceptions\AiUnavailableException;
 
-/**
- * Centralized retry behavior for AI provider calls.
- *
- * Retries only genuinely transient failures (rate limits, temporary
- * server errors, connection/timeout failures) with bounded exponential
- * backoff and jitter, honoring Retry-After when supplied. Permanent
- * errors are never retried: authentication, authorization, insufficient
- * balance, invalid requests, unknown models, context/token limits,
- * content-policy rejections, invalid responses, and configuration. New
- * permanent exception types stay non-retryable by construction — only
- * the four transient classes listed in `shouldRetry()` are ever
- * retried. Contains no provider-specific business logic: providers
- * translate their errors into normalized exceptions first.
- */
+
 class AiRetryPolicy
 {
     public function maxAttempts(): int

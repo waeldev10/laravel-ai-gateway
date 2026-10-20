@@ -39,24 +39,7 @@ class ConversationService
         return $this->baseQueryFor($user, $search)->get();
     }
 
-    /**
-     * Bounded sidebar groups: pinned (up to SIDEBAR_PINNED_LIMIT) plus recent
-     * (up to SIDEBAR_RECENT_LIMIT), each from its own limited query so the
-     * sidebar never loads the whole conversation history on any render.
-     *
-     * The open conversation ($activeId) is always included even when it falls
-     * outside the recent window, so highlighting never loses the current page.
-     * Such an overflow entry is appended at the end of its own group, keeping
-     * the ordering of everything else untouched and deterministic.
-     *
-     * Ordering rule (identical to baseQueryFor, applied per group): pinned
-     * first by pinned_at desc, then newest first by created_at desc, id desc
-     * as the final tie-break. Renames, message sends and edits never move a
-     * conversation: only creation (newest top), pin (into/out of the pinned
-     * group by pinned_at) and delete change positions.
-     *
-     * @return array{pinned: Collection<int, Conversation>, recent: Collection<int, Conversation>, hasMore: bool}
-     */
+ 
     public function sidebarFor(User $user, ?string $search = null, ?string $activeId = null): array
     {
         $pinnedLimit = self::SIDEBAR_PINNED_LIMIT;
@@ -132,16 +115,7 @@ class ConversationService
             ->orderByDesc('id');
     }
 
-    /**
-     * Split an already-ordered conversation list into pinned/recent groups.
-     *
-     * Single authoritative grouping for the shared Sidebar + Search
-     * navigation: pinned conversations come first, a pinned conversation
-     * never also appears in recent, and the incoming order is preserved
-     * inside each group (so recent keeps the newest-first ordering above).
-     *
-     * @return array{pinned: Collection<int, Conversation>, recent: Collection<int, Conversation>}
-     */
+   
     public function splitPinned(iterable $conversations): array
     {
         $items = $conversations instanceof Collection ? $conversations : collect($conversations);
@@ -151,11 +125,7 @@ class ConversationService
         return ['pinned' => $pinned->values(), 'recent' => $recent->values()];
     }
 
-    /**
-     * Retrieve one of the user's conversations by id.
-     *
-     * Scoped to the user, so other users' conversations resolve as missing.
-     */
+
     public function findFor(User $user, string $id): Conversation
     {
         return $user->conversations()->findOrFail($id);

@@ -12,13 +12,7 @@ use App\Models\User;
 
 class AiRequestLogger
 {
-    /**
-     * Persistent operational record of every AI attempt: who, from which
-     * source, through which provider/model, on which conversation, with
-     * timing, status, and failure info. Never stores prompts, completions,
-     * keys, or headers — operational metadata only, so usage analytics
-     * can be built later without sensitive data.
-     */
+   
     public function start(User $user, AiSource $source, ?Conversation $conversation = null): AiRequest
     {
         $provider = strtolower(trim((string) config('ai.provider', 'openai')));
@@ -64,11 +58,6 @@ class AiRequestLogger
         return $request->refresh();
     }
 
-    /**
-     * Record an attempt refused by the application usage policy without
-     * ever calling a provider. No timing, no error type — the audit log
-     * owns the cooldown narrative.
-     */
     public function blocked(User $user, AiSource $source, ?Conversation $conversation = null): AiRequest
     {
         return AiRequest::create([

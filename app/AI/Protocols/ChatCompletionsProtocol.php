@@ -5,17 +5,7 @@ namespace App\AI\Protocols;
 use App\AI\Contracts\StreamingAiProtocol;
 use Illuminate\Http\Client\Response;
 
-/**
- * OpenAI-compatible Chat Completions wire protocol: Bearer authentication,
- * a `{model, messages}` payload on `/chat/completions`, and the assistant
- * text at `choices.0.message.content`.
- *
- * Shared only by providers verified to use exactly this contract.
- *
- * Streaming uses the same endpoint with `stream: true` and Server-Sent
- * Events: `data: {"choices":[{"delta":{"content":"..."}}]}` chunks
- * terminated by `data: [DONE]`.
- */
+
 class ChatCompletionsProtocol implements StreamingAiProtocol
 {
     public function endpoint(array $config): string
@@ -27,7 +17,6 @@ class ChatCompletionsProtocol implements StreamingAiProtocol
     {
         return array_merge(
             ['Authorization' => 'Bearer '.(string) ($config['api_key'] ?? '')],
-            // Optional ranking headers (e.g. OpenRouter). Only sent when set.
             array_filter([
                 'HTTP-Referer' => $config['referer'] ?? null,
                 'X-Title' => $config['title'] ?? null,
@@ -87,10 +76,7 @@ class ChatCompletionsProtocol implements StreamingAiProtocol
         return is_string($delta) && $delta !== '' ? $delta : null;
     }
 
-    /**
-     * Return the payload of an SSE `data:` line, or null when the line is
-     * not a data line (blank, comment, or event line).
-     */
+ 
     private static function streamData(string $line): ?string
     {
         $trimmed = trim($line);

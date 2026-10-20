@@ -13,17 +13,11 @@ This file is the entry point for AI agents working on this project.
 Before modifying code:
 
 1. Read this file.
-2. Read `WORKFLOW.md`.
-3. Read `plans/README.md`.
-4. Identify the current plan and phase.
-5. Read the relevant plan completely.
-6. Read `agent-skills/README.md`.
-7. Read all skills relevant to the current phase.
-8. Inspect the existing code before making changes.
-9. Propose the implementation scope and wait for human confirmation.
-10. Implement only the approved phase.
-
-Follow `WORKFLOW.md` for the complete development process.
+2. Read `agent-skills/README.md`.
+3. Read all skills relevant to the current phase.
+4. Inspect the existing code before making changes.
+5. Propose the implementation scope and wait for human confirmation.
+6. Implement only the approved phase.
 
 ---
 
